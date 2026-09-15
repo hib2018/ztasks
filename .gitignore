@@ -1,0 +1,24 @@
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+.env*
+.idea/
+.vscode/
+
+# Zig
+.zig-cache/
+.zig-global-cache/
+zig-out/
+core/.zig-cache/
+core/zig-out/
+
+# Go
+.go-build-cache/
+vendor/
+coverage/
+dist/
+
+# Project-local runtime state
+.ztasks/

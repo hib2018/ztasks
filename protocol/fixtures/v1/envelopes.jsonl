@@ -1,0 +1,6 @@
+{"version":1,"request_id":"req-version-001","op":"version.get","actor":{"kind":"human","id":"operator"},"payload":{}}
+{"version":1,"request_id":"req-version-001","ok":true,"result":{"protocol_version":1,"capabilities":[]},"warnings":[]}
+{"version":1,"request_id":"req-invalid-001","ok":false,"error":{"code":"unsupported_version","message":"unsupported protocol version","details":{"supported_versions":[1]}}}
+{"version":1,"request_id":"req-retry-001","op":"human.comment","actor":{"kind":"human","id":"operator"},"task_id":"T001","payload":{"message":"Please verify the parser boundary."}}
+{"version":1,"request_id":"req-retry-001","op":"human.comment","actor":{"kind":"human","id":"operator"},"task_id":"T001","payload":{"message":"Please verify the parser boundary."}}
+{"version":1,"request_id":"req-retry-001","ok":false,"error":{"code":"idempotency_conflict","message":"request identity was reused with different semantics","details":{}}}

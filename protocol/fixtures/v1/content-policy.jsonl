@@ -1,0 +1,9 @@
+{"case":"comment_exact_raw_limit","field":"payload.message","input_kind":"repeat_ascii","input_size":4096,"expected":{"ok":true,"sanitized_size":4096}}
+{"case":"comment_over_raw_limit","field":"payload.message","input_kind":"repeat_ascii","input_size":4097,"expected":{"ok":false,"code":"field_too_large","limit":4096}}
+{"case":"actor_exact_limit","field":"actor.id","input_kind":"repeat_ascii","input_size":128,"expected":{"ok":true,"sanitized_size":128}}
+{"case":"actor_over_limit","field":"actor.id","input_kind":"repeat_ascii","input_size":129,"expected":{"ok":false,"code":"field_too_large","limit":128}}
+{"case":"recognized_bearer","field":"payload.message","input":"Authorization: Bearer abcdef123456","expected":{"ok":true,"sanitized":"Authorization: [REDACTED:authorization]","redaction_class":"authorization"}}
+{"case":"recognized_assignment","field":"payload.message","input":"token=abcdef123456","expected":{"ok":true,"sanitized":"token=[REDACTED:token]","redaction_class":"token"}}
+{"case":"prohibited_private_reasoning","field":"payload.private_reasoning","input":"must-not-echo","expected":{"ok":false,"code":"prohibited_field"}}
+{"case":"unsafe_escape","field":"payload.message","input":"safe\u001b[31munsafe","expected":{"ok":false,"code":"invalid_text"}}
+{"case":"unknown_secret_caller_responsibility","field":"payload.message","input":"opaque-sensitive-material","expected":{"ok":true,"sanitized":"opaque-sensitive-material","diagnostic":"caller_responsibility"}}

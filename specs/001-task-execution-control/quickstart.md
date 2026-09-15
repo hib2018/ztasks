@@ -16,6 +16,22 @@ go test -race ./...
 Expected: Core, Frontend, shared contract, process-failure, and race tests pass without a live
 Agent or network.
 
+## Established authority boundary
+
+The Foundation suite fixes the following boundary before Runtime mutation exists:
+
+- Zig Core owns Definition/Event/Runtime models, content limits, credential sanitization,
+  closed payload validation, protocol request validation, and stable safe errors.
+- Go owns transport-facing decode types and presentation compatibility only. It does not
+  select Events, infer transitions, or mutate Runtime.
+- `protocol/fixtures/` is the language-neutral contract input. `make test-contract` requires
+  both implementations to consume the same envelope fixture successfully.
+- Protocol stdout is JSON Lines only; diagnostics use stderr and may expose field/class/limit
+  metadata but never rejected or redacted source values.
+
+At this checkpoint there is deliberately no Event append, state reducer, source mutation,
+or Agent-specific behavior.
+
 Use a fixture containing these rows under a Phase heading:
 
 ```markdown

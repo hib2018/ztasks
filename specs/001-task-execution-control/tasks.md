@@ -22,11 +22,11 @@ demonstrable. ztasks does not rewrite this file as Runtime state.
 
 **Purpose**: Initialize independently buildable Zig Core and Go Frontend roots plus shared fixtures.
 
-- [ ] T001 Create Zig 0.16 library, executable, and test build steps in `core/build.zig` and `core/build.zig.zon`
-- [ ] T002 Create the minimal Core entry point and test aggregation root in `core/src/main.zig` and `core/src/root.zig` (depends on T001)
-- [ ] T003 [P] Create the Go 1.27 module and minimal Frontend entry point in `app/go.mod` and `app/cmd/ztasks/main.go`
-- [ ] T004 [P] Document protocol ownership, versioning, and stdout/stderr separation in `protocol/README.md`
-- [ ] T005 Add repository build, format, and test entry points in `Makefile` (depends on T001, T003, T004)
+- [X] T001 Create Zig 0.16 library, executable, and test build steps in `core/build.zig` and `core/build.zig.zon`
+- [X] T002 Create the minimal Core entry point and test aggregation root in `core/src/main.zig` and `core/src/root.zig` (depends on T001)
+- [X] T003 [P] Create the Go 1.27 module and minimal Frontend entry point in `app/go.mod` and `app/cmd/ztasks/main.go`
+- [X] T004 [P] Document protocol ownership, versioning, and stdout/stderr separation in `protocol/README.md`
+- [X] T005 Add repository build, format, and test entry points in `Makefile` (depends on T001, T003, T004)
 
 **Checkpoint**: Empty Core and Frontend build and test independently without implementing domain behavior.
 
@@ -38,25 +38,25 @@ demonstrable. ztasks does not rewrite this file as Runtime state.
 
 **⚠️ CRITICAL**: Complete this phase before starting any User Story.
 
-- [ ] T006 [P] Create Protocol v1 success/error/idempotency golden fixtures in `protocol/fixtures/v1/envelopes.jsonl` (depends on T005)
-- [ ] T007 [P] Create valid, raw/sanitized boundary-size, prohibited-field, recognized-credential, and unknown-secret-responsibility fixtures in `protocol/fixtures/v1/content-policy.jsonl` (depends on T005)
-- [ ] T008 [P] Create exact, ambiguous, absent, stale-digest, and deterministic dependency extraction fixtures in `protocol/fixtures/speckit/dependencies/` (depends on T005)
-- [ ] T009 [P] Write failing PhaseDefinition, TaskDefinition, and SourceSpan validation tests in `core/src/domain/task_definition.zig` (depends on T005)
-- [ ] T010 [P] Write failing Actor, Event identity, typed payload, and 65,536-byte Event tests in `core/src/domain/event.zig` (depends on T005)
-- [ ] T011 [P] Write failing RuntimeStatus and TaskRuntime model tests in `core/src/domain/task_runtime.zig` (depends on T005)
-- [ ] T012 [P] Write failing raw-and-sanitized boundary, control-character, prohibited-field, recognized-credential, and non-echo tests in `core/src/domain/content_policy.zig` (depends on T005)
-- [ ] T013 Implement pre-redaction UTF-8 measurement, identifier, title, and source-locator validation in `core/src/domain/content_policy.zig` (depends on T012)
-- [ ] T014 Implement deterministic recognized-credential sanitization, non-secret redaction metadata, and caller-responsibility diagnostics in `core/src/domain/content_policy.zig` (depends on T012)
-- [ ] T015 Implement PhaseDefinition, TaskDefinition, SourceSpan, and metadata validation using T013 in `core/src/domain/task_definition.zig` (depends on T009, T013)
-- [ ] T016 [P] Implement RuntimeStatus, DefinitionState, TaskRuntime, and safe ErrorDetail models in `core/src/domain/task_runtime.zig` (depends on T011)
-- [ ] T017 Implement Actor, EventType, closed typed payloads, canonical Event sizing, and prohibited-field rejection in `core/src/domain/event.zig` (depends on T010, T013, T014)
-- [ ] T018 [P] Write failing strict envelope, 1 MiB line, version, request identity, and content-policy error tests in `core/src/protocol/request.zig` and `core/src/protocol/response.zig` (depends on T005)
-- [ ] T019 Implement Protocol v1 request/response decoding, stable errors, and sanitized diagnostics in `core/src/protocol/request.zig` and `core/src/protocol/response.zig` (depends on T006, T017, T018)
-- [ ] T020 [P] Write Go golden-fixture decoding and unknown-field rejection tests in `app/internal/protocol/protocol_test.go` (depends on T005)
-- [ ] T021 Implement language-neutral Go Protocol types without domain transitions in `app/internal/protocol/protocol.go` (depends on T006, T020)
-- [ ] T022 [P] Add a fixture checker that verifies Zig and Go accept the same envelopes in `tests/contract/protocol_fixture_test.go` (depends on T019, T021)
-- [ ] T023 [P] Document fixture update and secret-safe failure-output rules in `protocol/fixtures/README.md` (depends on T006, T007, T008)
-- [ ] T024 Run Foundation tests and record the established Core/Frontend authority boundary in `specs/001-task-execution-control/quickstart.md` (depends on T015, T016, T017, T019, T021, T022, T023)
+- [X] T006 [P] Create Protocol v1 success/error/idempotency golden fixtures in `protocol/fixtures/v1/envelopes.jsonl` (depends on T005)
+- [X] T007 [P] Create valid, raw/sanitized boundary-size, prohibited-field, recognized-credential, and unknown-secret-responsibility fixtures in `protocol/fixtures/v1/content-policy.jsonl` (depends on T005)
+- [X] T008 [P] Create exact, ambiguous, absent, stale-digest, and deterministic dependency extraction fixtures in `protocol/fixtures/speckit/dependencies/` (depends on T005)
+- [X] T009 [P] Write failing PhaseDefinition, TaskDefinition, and SourceSpan validation tests in `core/src/domain/task_definition.zig` (depends on T005)
+- [X] T010 [P] Write failing Actor, Event identity, typed payload, and 65,536-byte Event tests in `core/src/domain/event.zig` (depends on T005)
+- [X] T011 [P] Write failing RuntimeStatus and TaskRuntime model tests in `core/src/domain/task_runtime.zig` (depends on T005)
+- [X] T012 [P] Write failing raw-and-sanitized boundary, control-character, prohibited-field, recognized-credential, and non-echo tests in `core/src/domain/content_policy.zig` (depends on T005)
+- [X] T013 Implement pre-redaction UTF-8 measurement, identifier, title, and source-locator validation in `core/src/domain/content_policy.zig` (depends on T012)
+- [X] T014 Implement deterministic recognized-credential sanitization, non-secret redaction metadata, and caller-responsibility diagnostics in `core/src/domain/content_policy.zig` (depends on T012)
+- [X] T015 Implement PhaseDefinition, TaskDefinition, SourceSpan, and metadata validation using T013 in `core/src/domain/task_definition.zig` (depends on T009, T013)
+- [X] T016 [P] Implement RuntimeStatus, DefinitionState, TaskRuntime, and safe ErrorDetail models in `core/src/domain/task_runtime.zig` (depends on T011)
+- [X] T017 Implement Actor, EventType, closed typed payloads, canonical Event sizing, and prohibited-field rejection in `core/src/domain/event.zig` (depends on T010, T013, T014)
+- [X] T018 [P] Write failing strict envelope, 1 MiB line, version, request identity, and content-policy error tests in `core/src/protocol/request.zig` and `core/src/protocol/response.zig` (depends on T005)
+- [X] T019 Implement Protocol v1 request/response decoding, stable errors, and sanitized diagnostics in `core/src/protocol/request.zig` and `core/src/protocol/response.zig` (depends on T006, T017, T018)
+- [X] T020 [P] Write Go golden-fixture decoding and unknown-field rejection tests in `app/internal/protocol/protocol_test.go` (depends on T005)
+- [X] T021 Implement language-neutral Go Protocol types without domain transitions in `app/internal/protocol/protocol.go` (depends on T006, T020)
+- [X] T022 [P] Add a fixture checker that verifies Zig and Go accept the same envelopes in `tests/contract/protocol_fixture_test.go` (depends on T019, T021)
+- [X] T023 [P] Document fixture update and secret-safe failure-output rules in `protocol/fixtures/README.md` (depends on T006, T007, T008)
+- [X] T024 Run Foundation tests and record the established Core/Frontend authority boundary in `specs/001-task-execution-control/quickstart.md` (depends on T015, T016, T017, T019, T021, T022, T023)
 
 **Checkpoint**: Both languages agree on envelopes, limits, and sanitized errors; no Runtime mutation exists yet.
 
@@ -72,28 +72,28 @@ human/JSON/TUI agreement, and unchanged source bytes.
 
 ### Tests for User Story 1
 
-- [ ] T025 [P] [US1] Write source binding resolution and Project path-escape rejection tests in `core/src/sources/source.zig` (depends on T024)
-- [ ] T026 [P] [US1] Write recognized row, Phase, P/story, checkbox, order, and title parsing tests in `core/src/sources/speckit.zig` (depends on T024)
-- [ ] T027 [P] [US1] Write exact terminal clause, ambiguous/absent diagnostic, canonical JSON, raw SHA-256, and stale-artifact tests in `core/src/sources/dependency_extraction.zig` (depends on T024)
-- [ ] T028 [P] [US1] Write duplicate, missing, self, and cyclic dependency batch rejection tests in `core/src/application/definition_query.zig` (depends on T024)
-- [ ] T029 [P] [US1] Write pending/ready and unsatisfied dependency projection tests in `core/src/domain/reducer.zig` (depends on T024)
-- [ ] T030 [P] [US1] Write no-Event query mapping tests for task.list, task.show, and source.validate in `core/src/application/query.zig` (depends on T024)
-- [ ] T031 [P] [US1] Write status and task-show human/JSON CLI output tests in `app/internal/cli/status_test.go` (depends on T024)
-- [ ] T032 [P] [US1] Write Phase/Task selection, filtering, and detail model tests in `app/internal/tui/model/model_test.go` (depends on T024)
+- [X] T025 [P] [US1] Write source binding resolution and Project path-escape rejection tests in `core/src/sources/source.zig` (depends on T024)
+- [X] T026 [P] [US1] Write recognized row, Phase, P/story, checkbox, order, and title parsing tests in `core/src/sources/speckit.zig` (depends on T024)
+- [X] T027 [P] [US1] Write exact terminal clause, ambiguous/absent diagnostic, canonical JSON, raw SHA-256, and stale-artifact tests in `core/src/sources/dependency_extraction.zig` (depends on T024)
+- [X] T028 [P] [US1] Write duplicate, missing, self, and cyclic dependency batch rejection tests in `core/src/application/definition_query.zig` (depends on T024)
+- [X] T029 [P] [US1] Write pending/ready and unsatisfied dependency projection tests in `core/src/domain/reducer.zig` (depends on T024)
+- [X] T030 [P] [US1] Write no-Event query mapping tests for task.list, task.show, and source.validate in `core/src/application/query.zig` (depends on T024)
+- [X] T031 [P] [US1] Write status and task-show human/JSON CLI output tests in `app/internal/cli/status_test.go` (depends on T024)
+- [X] T032 [P] [US1] Write Phase/Task selection, filtering, and detail model tests in `app/internal/tui/model/model_test.go` (depends on T024)
 
 ### Implementation for User Story 1
 
-- [ ] T033 [US1] Implement explicit, feature.json, and sole-candidate Task source resolution in `core/src/sources/source.zig` (depends on T025)
-- [ ] T034 [US1] Implement exact terminal dependency extraction, evidence spans, deterministic diagnostics, and canonical JSON in `core/src/sources/dependency_extraction.zig` (depends on T027)
-- [ ] T035 [US1] Implement the normalized read-only Spec Kit adapter in `core/src/sources/speckit.zig` (depends on T026, T034)
-- [ ] T036 [US1] Implement atomic DefinitionBatch validation for read queries in `core/src/application/definition_query.zig` (depends on T028, T033, T035)
-- [ ] T037 [US1] Implement initial pending/ready projection and unsatisfied IDs in `core/src/domain/reducer.zig` (depends on T029, T036)
-- [ ] T038 [US1] Implement task.list, task.show, and source.validate query services in `core/src/application/query.zig` (depends on T030, T037)
-- [ ] T039 [US1] Implement the read-only Core serve loop with protocol-only stdout in `core/src/protocol/handler.zig` (depends on T038)
-- [ ] T040 [US1] Implement shell-free Core process startup and response correlation in `app/internal/coreclient/client.go` (depends on T039)
-- [ ] T041 [US1] Implement status and task show human/JSON commands in `app/internal/cli/status.go` (depends on T031, T040)
-- [ ] T042 [US1] Implement read-only Task list/detail/filter/resize TUI in `app/internal/tui/model/model.go`, `app/internal/tui/update/update.go`, and `app/internal/tui/view/view.go` (depends on T032, T040)
-- [ ] T043 [US1] Add cross-binary monitor, dependency artifact regeneration/stale rejection, and source byte-invariance coverage in `tests/e2e/monitor_test.go` (depends on T041, T042)
+- [X] T033 [US1] Implement explicit, feature.json, and sole-candidate Task source resolution in `core/src/sources/source.zig` (depends on T025)
+- [X] T034 [US1] Implement exact terminal dependency extraction, evidence spans, deterministic diagnostics, and canonical JSON in `core/src/sources/dependency_extraction.zig` (depends on T027)
+- [X] T035 [US1] Implement the normalized read-only Spec Kit adapter in `core/src/sources/speckit.zig` (depends on T026, T034)
+- [X] T036 [US1] Implement atomic DefinitionBatch validation for read queries in `core/src/application/definition_query.zig` (depends on T028, T033, T035)
+- [X] T037 [US1] Implement initial pending/ready projection and unsatisfied IDs in `core/src/domain/reducer.zig` (depends on T029, T036)
+- [X] T038 [US1] Implement task.list, task.show, and source.validate query services in `core/src/application/query.zig` (depends on T030, T037)
+- [X] T039 [US1] Implement the read-only Core serve loop with protocol-only stdout in `core/src/protocol/handler.zig` (depends on T038)
+- [X] T040 [US1] Implement shell-free Core process startup and response correlation in `app/internal/coreclient/client.go` (depends on T039)
+- [X] T041 [US1] Implement status and task show human/JSON commands in `app/internal/cli/status.go` (depends on T031, T040)
+- [X] T042 [US1] Implement read-only Task list/detail/filter/resize TUI in `app/internal/tui/model/model.go`, `app/internal/tui/update/update.go`, and `app/internal/tui/view/view.go` (depends on T032, T040)
+- [X] T043 [US1] Add cross-binary monitor, dependency artifact regeneration/stale rejection, and source byte-invariance coverage in `tests/e2e/monitor_test.go` (depends on T041, T042)
 
 **Checkpoint**: Users can monitor Definition and derived readiness without initialization, Event mutation, or an Agent.
 

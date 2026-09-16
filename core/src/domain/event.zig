@@ -63,7 +63,16 @@ pub const InterventionOutcome = enum { acknowledged, rejected, unsupported, comp
 
 pub const EventPayload = union(enum) {
     project_initialized: struct { source_digest: []const u8, definition_ref: []const u8, dependency_digest: []const u8 },
-    source_synced: struct { previous_digest: []const u8, source_digest: []const u8, definition_ref: []const u8, dependency_digest: []const u8 },
+    source_synced: struct {
+        previous_digest: []const u8,
+        source_digest: []const u8,
+        definition_ref: []const u8,
+        dependency_digest: []const u8,
+        added: []const []const u8 = &.{},
+        changed: []const []const u8 = &.{},
+        missing: []const []const u8 = &.{},
+        reappeared: []const []const u8 = &.{},
+    },
     started: struct {},
     progress: struct { current_action: []const u8 },
     paused: struct {},
@@ -159,6 +168,10 @@ fn validatePayload(event_type: EventType, payload: EventPayload, allocator: std.
             try content_policy.validateIdentifier(value.source_digest);
             try content_policy.validateSourceLocator(value.definition_ref);
             try content_policy.validateIdentifier(value.dependency_digest);
+            for (value.added) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
+            for (value.changed) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
+            for (value.missing) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
+            for (value.reappeared) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
         },
         .progress => |value| try ensureSanitized(allocator, "payload.current_action", value.current_action),
         .blocked => |value| try ensureSanitized(allocator, "payload.reason", value.reason),
@@ -217,4 +230,25 @@ test "event kind and payload variant must match" {
     var event = Event.startedForTest();
     event.payload = .{ .progress = .{ .current_action = "editing parser" } };
     try std.testing.expectError(error.InvalidEvent, event.validate(std.testing.allocator));
+}
+
+test "source sync payload carries artifact identities and exact change sets" {
+    const value = Event{
+        .version = 1,
+        .event_id = "evt-sync",
+        .seq = 1,
+        .request_id = "req-sync",
+        .timestamp = "2026-09-16T00:00:00Z",
+        .actor = .{ .kind = .human },
+        .event_type = .source_synced,
+        .payload = .{ .source_synced = .{
+            .previous_digest = "sha256:old",
+            .source_digest = "sha256:new",
+            .definition_ref = ".ztasks/sources/new/definition.json",
+            .dependency_digest = "sha256:deps",
+            .added = &.{"T002"},
+            .missing = &.{"T001"},
+        } },
+    };
+    try value.validate(std.testing.allocator);
 }

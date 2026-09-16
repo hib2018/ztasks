@@ -11,9 +11,20 @@ pub const source = @import("sources/source.zig");
 pub const dependency_extraction = @import("sources/dependency_extraction.zig");
 pub const speckit = @import("sources/speckit.zig");
 pub const definition_query = @import("application/definition_query.zig");
+pub const sync_application = @import("application/sync.zig");
 pub const reducer = @import("domain/reducer.zig");
 pub const query = @import("application/query.zig");
 pub const protocol_handler = @import("protocol/handler.zig");
+pub const transition = @import("domain/transition.zig");
+pub const operation_map = @import("application/operation_map.zig");
+pub const storage_paths = @import("storage/paths.zig");
+pub const storage_lock = @import("storage/lock.zig");
+pub const event_log = @import("storage/event_log.zig");
+pub const replay = @import("storage/replay.zig");
+pub const snapshot = @import("storage/snapshot.zig");
+pub const source_artifact_store = @import("storage/source_artifact_store.zig");
+pub const command = @import("application/command.zig");
+pub const intervention = @import("domain/intervention.zig");
 
 test "protocol version starts at one" {
     try std.testing.expectEqual(@as(u32, 1), protocol_version);

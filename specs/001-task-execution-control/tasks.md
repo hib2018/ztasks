@@ -108,33 +108,33 @@ snapshot, and verify only mapped Events persist and replay reconstructs identica
 
 ### Tests for User Story 2
 
-- [ ] T044 [P] [US2] Write all execution transitions, terminal rules, and reason/error precondition tests in `core/src/domain/transition.zig` (depends on T043)
-- [ ] T045 [P] [US2] Write progress, attempt, dependency unlock, and deterministic replay tests in `core/src/domain/reducer.zig` (depends on T043)
-- [ ] T046 [P] [US2] Create execution operation/Event mapping fixtures in `protocol/fixtures/v1/execution.jsonl` (depends on T043)
-- [ ] T047 [P] [US2] Write Core-owned task operation/Event and actor mapping tests in `core/src/application/operation_map.zig` (depends on T043)
-- [ ] T048 [P] [US2] Write append/sync, contiguous sequence, duplicate request, and conflict tests in `core/src/storage/event_log.zig` (depends on T043)
-- [ ] T049 [P] [US2] Write lock contention and process-exit release tests in `core/src/storage/lock.zig` (depends on T043)
-- [ ] T050 [P] [US2] Write snapshot round-trip and stale/prefix mismatch rejection tests in `core/src/storage/snapshot.zig` (depends on T043)
-- [ ] T051 [P] [US2] Write truncated-tail and interior-corruption replay tests in `core/src/storage/replay.zig` (depends on T043)
-- [ ] T052 [P] [US2] Write malformed response, wrong ID, stderr flood, timeout, and retry tests in `app/internal/coreclient/process_test.go` (depends on T043)
-- [ ] T053 [P] [US2] Write execution command, event-list, and restricted event-emit CLI tests in `app/internal/cli/execution_test.go` (depends on T043)
+- [X] T044 [P] [US2] Write all execution transitions, terminal rules, and reason/error precondition tests in `core/src/domain/transition.zig` (depends on T043)
+- [X] T045 [P] [US2] Write progress, attempt, dependency unlock, and deterministic replay tests in `core/src/domain/reducer.zig` (depends on T043)
+- [X] T046 [P] [US2] Create execution operation/Event mapping fixtures in `protocol/fixtures/v1/execution.jsonl` (depends on T043)
+- [X] T047 [P] [US2] Write Core-owned task operation/Event and actor mapping tests in `core/src/application/operation_map.zig` (depends on T043)
+- [X] T048 [P] [US2] Write append/sync, contiguous sequence, duplicate request, and conflict tests in `core/src/storage/event_log.zig` (depends on T043)
+- [X] T049 [P] [US2] Write lock contention and process-exit release tests in `core/src/storage/lock.zig` (depends on T043)
+- [X] T050 [P] [US2] Write snapshot round-trip and stale/prefix mismatch rejection tests in `core/src/storage/snapshot.zig` (depends on T043)
+- [X] T051 [P] [US2] Write truncated-tail and interior-corruption replay tests in `core/src/storage/replay.zig` (depends on T043)
+- [X] T052 [P] [US2] Write malformed response, wrong ID, stderr flood, timeout, and retry tests in `app/internal/coreclient/process_test.go` (depends on T043)
+- [X] T053 [P] [US2] Write execution command, event-list, and restricted event-emit CLI tests in `app/internal/cli/execution_test.go` (depends on T043)
 
 ### Implementation for User Story 2
 
-- [ ] T054 [US2] Implement the execution transition table in `core/src/domain/transition.zig` (depends on T043)
-- [ ] T055 [US2] Implement execution Event reduction, attempts, current action, and dependency reevaluation in `core/src/domain/reducer.zig` (depends on T043)
-- [ ] T056 [US2] Implement the closed task operation/Event mapping and actor rules in `core/src/application/operation_map.zig` (depends on T043)
-- [ ] T057 [US2] Implement Project-local `.ztasks/` path ownership checks in `core/src/storage/paths.zig` (depends on T043)
-- [ ] T058 [US2] Implement stable cross-process Project locking in `core/src/storage/lock.zig` (depends on T043)
-- [ ] T059 [US2] Implement append-first synced Event storage and persistent request-id deduplication in `core/src/storage/event_log.zig` (depends on T043)
-- [ ] T060 [US2] Implement strict replay and locked final-fragment recovery in `core/src/storage/replay.zig` (depends on T043)
-- [ ] T061 [US2] Implement same-directory atomic disposable snapshots with prefix identity in `core/src/storage/snapshot.zig` (depends on T043)
-- [ ] T062 [US2] Implement validate→map→redact→append/sync→snapshot command transactions in `core/src/application/command.zig` (depends on T043)
-- [ ] T063 [US2] Connect execution mutations and event.list to the Core handler in `core/src/protocol/handler.zig` (depends on T043)
-- [ ] T064 [US2] Implement concurrent pipe draining, cancellation, and same-request retry in `app/internal/coreclient/client.go` (depends on T043)
-- [ ] T065 [US2] Implement execution commands, event list, and allowlisted event emit in `app/internal/cli/execution.go` (depends on T043)
-- [ ] T066 [US2] Add Runtime status, action, agent/session, and Activity rendering in `app/internal/tui/view/activity.go` (depends on T043)
-- [ ] T067 [US2] Add cross-binary mapping, replay, durability, and idempotency tests in `tests/e2e/execution_test.go` (depends on T043)
+- [X] T054 [US2] Implement the execution transition table in `core/src/domain/transition.zig` (depends on T043)
+- [X] T055 [US2] Implement execution Event reduction, attempts, current action, and dependency reevaluation in `core/src/domain/reducer.zig` (depends on T043)
+- [X] T056 [US2] Implement the closed task operation/Event mapping and actor rules in `core/src/application/operation_map.zig` (depends on T043)
+- [X] T057 [US2] Implement Project-local `.ztasks/` path ownership checks in `core/src/storage/paths.zig` (depends on T043)
+- [X] T058 [US2] Implement stable cross-process Project locking in `core/src/storage/lock.zig` (depends on T043)
+- [X] T059 [US2] Implement append-first synced Event storage and persistent request-id deduplication in `core/src/storage/event_log.zig` (depends on T043)
+- [X] T060 [US2] Implement strict replay and locked final-fragment recovery in `core/src/storage/replay.zig` (depends on T043)
+- [X] T061 [US2] Implement same-directory atomic disposable snapshots with prefix identity in `core/src/storage/snapshot.zig` (depends on T043)
+- [X] T062 [US2] Implement validate→map→redact→append/sync→snapshot command transactions in `core/src/application/command.zig` (depends on T043)
+- [X] T063 [US2] Connect execution mutations and event.list to the Core handler in `core/src/protocol/handler.zig` (depends on T043)
+- [X] T064 [US2] Implement concurrent pipe draining, cancellation, and same-request retry in `app/internal/coreclient/client.go` (depends on T043)
+- [X] T065 [US2] Implement execution commands, event list, and allowlisted event emit in `app/internal/cli/execution.go` (depends on T043)
+- [X] T066 [US2] Add Runtime status, action, agent/session, and Activity rendering in `app/internal/tui/view/activity.go` (depends on T043)
+- [X] T067 [US2] Add cross-binary mapping, replay, durability, and idempotency tests in `tests/e2e/execution_test.go` (depends on T043)
 
 **Checkpoint**: Event history is the Runtime authority and Go cannot create an unmapped or invalid state.
 
@@ -149,25 +149,25 @@ then submit task.paused and verify paused+resolved with correlated Activity in C
 
 ### Tests for User Story 3
 
-- [ ] T068 [P] [US3] Write intervention creation, status, conflict, and missing-definition tests in `core/src/domain/intervention.zig` (depends on T067)
-- [ ] T069 [P] [US3] Write pending/acknowledged/rejected/unsupported/resolved reducer tests in `core/src/domain/reducer.zig` (depends on T067)
-- [ ] T070 [P] [US3] Create human-request and response operation/Event fixtures in `protocol/fixtures/v1/interventions.jsonl` (depends on T067)
-- [ ] T071 [P] [US3] Write human-versus-acknowledgement mapping and actor rejection tests in `core/src/application/operation_map.zig` (depends on T067)
-- [ ] T072 [P] [US3] Write pause/resume/retry/stop/skip/inspect/comment wording tests in `app/internal/cli/intervention_test.go` (depends on T067)
-- [ ] T073 [P] [US3] Write pending-versus-confirmed TUI model/view tests in `app/internal/tui/view/intervention_test.go` (depends on T067)
+- [X] T068 [P] [US3] Write intervention creation, status, conflict, and missing-definition tests in `core/src/domain/intervention.zig` (depends on T067)
+- [X] T069 [P] [US3] Write pending/acknowledged/rejected/unsupported/resolved reducer tests in `core/src/domain/reducer.zig` (depends on T067)
+- [X] T070 [P] [US3] Create human-request and response operation/Event fixtures in `protocol/fixtures/v1/interventions.jsonl` (depends on T067)
+- [X] T071 [P] [US3] Write human-versus-acknowledgement mapping and actor rejection tests in `core/src/application/operation_map.zig` (depends on T067)
+- [X] T072 [P] [US3] Write pause/resume/retry/stop/skip/inspect/comment wording tests in `app/internal/cli/intervention_test.go` (depends on T067)
+- [X] T073 [P] [US3] Write pending-versus-confirmed TUI model/view tests in `app/internal/tui/view/intervention_test.go` (depends on T067)
 
 ### Implementation for User Story 3
 
-- [ ] T074 [US3] Implement InterventionRequest state and control-conflict validation in `core/src/domain/intervention.zig` (depends on T067)
-- [ ] T075 [US3] Implement intervention request/response/lifecycle correlation reduction in `core/src/domain/reducer.zig` (depends on T067)
-- [ ] T076 [US3] Extend the operation/Event mapping with all human and response operations in `core/src/application/operation_map.zig` (depends on T067)
-- [ ] T077 [US3] Implement human request and intervention.respond transactions in `core/src/application/command.zig` (depends on T067)
-- [ ] T078 [US3] Connect intervention operations to the Core handler in `core/src/protocol/handler.zig` (depends on T067)
-- [ ] T079 [US3] Implement human intervention CLI with requested/acknowledged wording in `app/internal/cli/intervention.go` (depends on T067)
-- [ ] T080 [US3] Implement Human Intervention pane and pending/result rendering in `app/internal/tui/view/intervention.go` (depends on T067)
-- [ ] T081 [US3] Define vendor-neutral Adapter capability and safe-summary interfaces in `app/internal/agent/adapter.go` (depends on T067)
-- [ ] T082 [US3] Add Adapter conformance fixtures for supported, rejected, and unsupported actions in `app/internal/agent/adapter_test.go` (depends on T067)
-- [ ] T083 [US3] Add pause timing, first-attempt distinction, and 30-second workflow usability validation in `tests/e2e/intervention_test.go` (depends on T067)
+- [X] T074 [US3] Implement InterventionRequest state and control-conflict validation in `core/src/domain/intervention.zig` (depends on T067)
+- [X] T075 [US3] Implement intervention request/response/lifecycle correlation reduction in `core/src/domain/reducer.zig` (depends on T067)
+- [X] T076 [US3] Extend the operation/Event mapping with all human and response operations in `core/src/application/operation_map.zig` (depends on T067)
+- [X] T077 [US3] Implement human request and intervention.respond transactions in `core/src/application/command.zig` (depends on T067)
+- [X] T078 [US3] Connect intervention operations to the Core handler in `core/src/protocol/handler.zig` (depends on T067)
+- [X] T079 [US3] Implement human intervention CLI with requested/acknowledged wording in `app/internal/cli/intervention.go` (depends on T067)
+- [X] T080 [US3] Implement Human Intervention pane and pending/result rendering in `app/internal/tui/view/intervention.go` (depends on T067)
+- [X] T081 [US3] Define vendor-neutral Adapter capability and safe-summary interfaces in `app/internal/agent/adapter.go` (depends on T067)
+- [X] T082 [US3] Add Adapter conformance fixtures for supported, rejected, and unsupported actions in `app/internal/agent/adapter_test.go` (depends on T067)
+- [X] T083 [US3] Add pause timing, first-attempt distinction, and 30-second workflow usability validation in `tests/e2e/intervention_test.go` (depends on T067)
 
 **Checkpoint**: Request and effect cannot be confused, and the workflow remains usable without a live Agent.
 

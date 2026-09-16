@@ -8,8 +8,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hib2018/ztasks/app/internal/coreclient"
+	"github.com/hib2018/ztasks/app/internal/protocol"
 	"github.com/hib2018/ztasks/app/internal/tui"
 	tuimodel "github.com/hib2018/ztasks/app/internal/tui/model"
 )
@@ -77,6 +79,73 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 			output, fetchErr = RenderTask(view, machineReadable)
 		}
 		err = fetchErr
+	case len(filtered) >= 2 && (filtered[0] == "start" || filtered[0] == "block" || filtered[0] == "fail" || filtered[0] == "complete"):
+		message := ""
+		if len(filtered) > 2 {
+			message = strings.Join(filtered[2:], " ")
+		}
+		request, buildErr := BuildExecutionRequest(requestID, filtered[0], filtered[1], message, "", "")
+		if buildErr == nil {
+			var result []byte
+			result, buildErr = Execute(client, request)
+			if buildErr == nil {
+				output, buildErr = RenderExecutionResult(result, machineReadable)
+			}
+		}
+		err = buildErr
+	case len(filtered) >= 2 && (filtered[0] == "pause" || filtered[0] == "resume" || filtered[0] == "retry" || filtered[0] == "stop" || filtered[0] == "skip" || filtered[0] == "inspect" || filtered[0] == "comment"):
+		message := ""
+		if len(filtered) > 2 {
+			message = strings.Join(filtered[2:], " ")
+		}
+		request, buildErr := BuildInterventionRequest(requestID, filtered[0], filtered[1], message)
+		if buildErr == nil {
+			var result []byte
+			result, buildErr = Execute(client, request)
+			if buildErr == nil {
+				if machineReadable {
+					output = string(result) + "\n"
+				} else {
+					output = RenderInterventionAccepted(filtered[1], filtered[0])
+				}
+			}
+		}
+		err = buildErr
+	case len(filtered) >= 2 && filtered[0] == "event" && filtered[1] == "list":
+		taskID := ""
+		if len(filtered) == 3 {
+			taskID = filtered[2]
+		}
+		result, fetchErr := Execute(client, BuildEventListRequest(requestID, taskID))
+		if fetchErr == nil {
+			if machineReadable {
+				output = string(result) + "\n"
+			} else {
+				output = string(result) + "\n"
+			}
+		}
+		err = fetchErr
+	case len(filtered) >= 6 && filtered[0] == "event" && filtered[1] == "emit":
+		values := flagValues(filtered[2:])
+		eventType, hasType := values["--type"]
+		taskID, hasTask := values["--task"]
+		if !hasType || !hasTask {
+			err = fmt.Errorf("event emit requires --type and --task")
+			break
+		}
+		payload, buildErr := EventEmitPayload(eventType, values["--message"])
+		if buildErr == nil {
+			var request protocol.Request
+			request, buildErr = BuildEventEmitRequest(requestID, eventType, taskID, payload)
+			if buildErr == nil {
+				var result []byte
+				result, buildErr = Execute(client, request)
+				if buildErr == nil {
+					output, buildErr = RenderExecutionResult(result, machineReadable)
+				}
+			}
+		}
+		err = buildErr
 	default:
 		fmt.Fprintln(stderr, "unsupported command")
 		return 2
@@ -89,6 +158,14 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		return 3
 	}
 	return 0
+}
+
+func flagValues(arguments []string) map[string]string {
+	values := make(map[string]string)
+	for index := 0; index+1 < len(arguments); index += 2 {
+		values[arguments[index]] = arguments[index+1]
+	}
+	return values
 }
 
 func coreExecutable(projectRoot string) string {

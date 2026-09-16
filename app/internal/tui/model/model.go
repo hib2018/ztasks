@@ -13,12 +13,26 @@ type Task struct {
 	UnsatisfiedDependencies []string
 }
 
+type Activity struct {
+	Type   string
+	TaskID string
+	Detail string
+}
+
+type Intervention struct {
+	Action string
+	State  string
+	Detail string
+}
+
 type Model struct {
 	tasks         []Task
 	visible       []int
 	selected      int
 	selectedID    string
 	filter        string
+	activity      []Activity
+	interventions []Intervention
 	width, height int
 }
 
@@ -63,6 +77,22 @@ func (state *Model) Selected() Task {
 }
 
 func (state *Model) Detail() Task { return state.Selected() }
+
+func (state *Model) SetActivity(activity []Activity) {
+	state.activity = append([]Activity(nil), activity...)
+}
+
+func (state *Model) Activity() []Activity {
+	return append([]Activity(nil), state.activity...)
+}
+
+func (state *Model) SetInterventions(interventions []Intervention) {
+	state.interventions = append([]Intervention(nil), interventions...)
+}
+
+func (state *Model) Interventions() []Intervention {
+	return append([]Intervention(nil), state.interventions...)
+}
 
 func (state *Model) Visible() []Task {
 	visible := make([]Task, 0, len(state.visible))

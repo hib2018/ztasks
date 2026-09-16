@@ -56,7 +56,6 @@ fn allowedPayloadFields(op: []const u8) ?[]const []const u8 {
     if (std.mem.eql(u8, op, "version.get") or
         std.mem.eql(u8, op, "project.inspect") or
         std.mem.eql(u8, op, "health.check") or
-        std.mem.eql(u8, op, "task.start") or
         std.mem.eql(u8, op, "task.pause_ack") or
         std.mem.eql(u8, op, "task.resume_ack") or
         std.mem.eql(u8, op, "task.skip") or
@@ -65,13 +64,14 @@ fn allowedPayloadFields(op: []const u8) ?[]const []const u8 {
         std.mem.eql(u8, op, "human.retry_request") or
         std.mem.eql(u8, op, "human.stop_request") or
         std.mem.eql(u8, op, "human.skip_request")) return none;
+    if (std.mem.eql(u8, op, "task.start")) return &.{"session_id"};
     if (std.mem.eql(u8, op, "human.comment") or std.mem.eql(u8, op, "task.comment")) return message;
     if (std.mem.eql(u8, op, "human.inspect_request")) return focus;
     if (std.mem.eql(u8, op, "task.progress")) return &.{"current_action"};
     if (std.mem.eql(u8, op, "task.block")) return &.{"reason"};
     if (std.mem.eql(u8, op, "task.fail")) return &.{ "code", "message" };
     if (std.mem.eql(u8, op, "task.complete")) return &.{"result"};
-    if (std.mem.eql(u8, op, "intervention.respond")) return &.{ "outcome", "message" };
+    if (std.mem.eql(u8, op, "intervention.respond")) return &.{ "request_event_id", "outcome", "message" };
     if (std.mem.eql(u8, op, "task.list")) return &.{ "status", "phase", "agent" };
     if (std.mem.eql(u8, op, "task.show") or std.mem.eql(u8, op, "event.list")) return &.{ "limit", "after_seq" };
     if (std.mem.eql(u8, op, "source.validate") or std.mem.eql(u8, op, "project.init") or std.mem.eql(u8, op, "source.sync")) return &.{"locator"};

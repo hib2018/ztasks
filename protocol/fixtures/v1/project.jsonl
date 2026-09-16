@@ -1,0 +1,4 @@
+{"version":1,"request_id":"project-init","op":"project.init","actor":{"kind":"human","id":"operator"},"payload":{"locator":"specs/001-feature/tasks.md"}}
+{"version":1,"request_id":"source-sync","op":"source.sync","actor":{"kind":"human","id":"operator"},"payload":{}}
+{"version":1,"request_id":"project-inspect","op":"project.inspect","actor":{"kind":"human","id":"operator"},"payload":{}}
+{"version":1,"request_id":"health-check","op":"health.check","actor":{"kind":"human","id":"operator"},"payload":{}}

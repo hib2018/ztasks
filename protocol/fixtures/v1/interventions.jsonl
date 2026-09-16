@@ -1,0 +1,10 @@
+{"operation":"human.pause_request","actor":"human","event":"human.pause_requested","initial_state":"pending"}
+{"operation":"human.resume_request","actor":"human","event":"human.resume_requested","initial_state":"pending"}
+{"operation":"human.retry_request","actor":"human","event":"human.retry_requested","initial_state":"pending"}
+{"operation":"human.stop_request","actor":"human","event":"human.stop_requested","initial_state":"pending"}
+{"operation":"human.skip_request","actor":"human","event":"human.skip_requested","initial_state":"pending"}
+{"operation":"human.inspect_request","actor":"human","event":"human.inspect_requested","initial_state":"pending"}
+{"operation":"human.comment","actor":"human","event":"human.comment","initial_state":"pending"}
+{"operation":"intervention.respond","actor":"adapter","payload":{"outcome":"acknowledged"},"event":"intervention.responded"}
+{"operation":"intervention.respond","actor":"adapter","payload":{"outcome":"rejected"},"event":"intervention.responded"}
+{"operation":"intervention.respond","actor":"adapter","payload":{"outcome":"unsupported"},"event":"intervention.responded"}

@@ -1,0 +1,9 @@
+{"operation":"task.start","actor":"agent","payload":{},"event":"task.started"}
+{"operation":"task.progress","actor":"agent","payload":{"current_action":"editing parser"},"event":"task.progress"}
+{"operation":"task.pause_ack","actor":"adapter","payload":{},"event":"task.paused"}
+{"operation":"task.resume_ack","actor":"adapter","payload":{},"event":"task.resumed"}
+{"operation":"task.block","actor":"agent","payload":{"reason":"waiting for dependency"},"event":"task.blocked"}
+{"operation":"task.fail","actor":"agent","payload":{"code":"compile_failed","message":"compiler returned an error"},"event":"task.failed"}
+{"operation":"task.complete","actor":"agent","payload":{"result":"parser implemented"},"event":"task.completed"}
+{"operation":"task.skip","actor":"adapter","payload":{},"event":"task.skipped"}
+{"operation":"task.comment","actor":"agent","payload":{"message":"review requested"},"event":"task.comment"}

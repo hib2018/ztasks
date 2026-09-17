@@ -26,3 +26,15 @@ field, changing its meaning, or changing operation behavior requires a new versi
 Concrete request, response, operation, and event schemas are introduced in the
 protocol phase. Until then this document fixes only ownership, framing, stream
 discipline, and versioning.
+
+## Published responsibility contracts
+
+- Dependency extraction produces digest-bound JSON and never modifies the source Markdown.
+- Every accepted mutation maps to exactly one Core-selected Event; queries append none.
+- Source adapters translate external definitions into source-neutral TaskDefinition values.
+- Closed payload schemas reject private reasoning and raw streams; recognized credentials are
+  redacted before Event identity allocation or persistence.
+
+The normative field limits, extraction grammar, mappings, and redaction classes are maintained in
+`specs/001-task-execution-control/contracts/`. Shared JSONL fixtures under `protocol/fixtures/`
+exercise the language-neutral surface.

@@ -62,11 +62,12 @@ pub const EventType = enum {
 pub const InterventionOutcome = enum { acknowledged, rejected, unsupported, completed };
 
 pub const EventPayload = union(enum) {
-    project_initialized: struct { source_digest: []const u8, definition_ref: []const u8, dependency_digest: []const u8 },
+    project_initialized: struct { source_digest: []const u8, definition_ref: []const u8, definition_digest: []const u8, dependency_digest: []const u8 },
     source_synced: struct {
         previous_digest: []const u8,
         source_digest: []const u8,
         definition_ref: []const u8,
+        definition_digest: []const u8,
         dependency_digest: []const u8,
         added: []const []const u8 = &.{},
         changed: []const []const u8 = &.{},
@@ -161,12 +162,14 @@ fn validatePayload(event_type: EventType, payload: EventPayload, allocator: std.
         .project_initialized => |value| {
             try content_policy.validateIdentifier(value.source_digest);
             try content_policy.validateSourceLocator(value.definition_ref);
+            try content_policy.validateIdentifier(value.definition_digest);
             try content_policy.validateIdentifier(value.dependency_digest);
         },
         .source_synced => |value| {
             try content_policy.validateIdentifier(value.previous_digest);
             try content_policy.validateIdentifier(value.source_digest);
             try content_policy.validateSourceLocator(value.definition_ref);
+            try content_policy.validateIdentifier(value.definition_digest);
             try content_policy.validateIdentifier(value.dependency_digest);
             for (value.added) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
             for (value.changed) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
@@ -245,9 +248,29 @@ test "source sync payload carries artifact identities and exact change sets" {
             .previous_digest = "sha256:old",
             .source_digest = "sha256:new",
             .definition_ref = ".ztasks/sources/new/definition.json",
+            .definition_digest = "sha256:definition",
             .dependency_digest = "sha256:deps",
             .added = &.{"T002"},
             .missing = &.{"T001"},
+        } },
+    };
+    try value.validate(std.testing.allocator);
+}
+
+test "project initialization binds source and both immutable artifact digests" {
+    const value = Event{
+        .version = 1,
+        .event_id = "evt-init",
+        .seq = 1,
+        .request_id = "req-init",
+        .timestamp = "2026-09-17T00:00:00Z",
+        .actor = .{ .kind = .system },
+        .event_type = .project_initialized,
+        .payload = .{ .project_initialized = .{
+            .source_digest = "sha256:source",
+            .definition_ref = ".ztasks/sources/source/definition.json",
+            .definition_digest = "sha256:definition",
+            .dependency_digest = "sha256:dependencies",
         } },
     };
     try value.validate(std.testing.allocator);

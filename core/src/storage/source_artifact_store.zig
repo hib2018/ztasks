@@ -46,12 +46,14 @@ fn writeImmutable(project: std.Io.Dir, io: std.Io, allocator: std.mem.Allocator,
     defer atomic.deinit(io);
     try atomic.file.writeStreamingAll(io, bytes);
     try atomic.file.sync(io);
-    try atomic.replace(io);
+    try atomic.link(io);
 }
 
 fn validDigest(value: []const u8) bool {
     if (value.len != 71 or !std.mem.startsWith(u8, value, "sha256:")) return false;
-    for (value[7..]) |character| if (!std.ascii.isHex(character)) return false;
+    for (value[7..]) |character| {
+        if (!std.ascii.isDigit(character) and !(character >= 'a' and character <= 'f')) return false;
+    }
     return true;
 }
 
@@ -69,4 +71,34 @@ test "artifact digests are deterministic and source keys are verified" {
     try std.testing.expectEqualStrings(&digest("definition"), &digest("definition"));
     try std.testing.expect(validDigest("sha256:" ++ "a" ** 64));
     try std.testing.expect(!validDigest("sha256:short"));
+}
+
+test "verified artifacts are immutable reusable and recover after interrupted pair write" {
+    var temporary = std.testing.tmpDir(.{});
+    defer temporary.cleanup();
+    const source_digest = "sha256:" ++ "a" ** 64;
+
+    const first = try writeVerified(temporary.dir, std.testing.io, std.testing.allocator, source_digest, "{\"tasks\":[]}", "{\"dependencies\":[]}\n");
+    defer first.deinit(std.testing.allocator);
+    const definition = try temporary.dir.readFileAlloc(std.testing.io, first.definition_ref, std.testing.allocator, .limited(4096));
+    defer std.testing.allocator.free(definition);
+    try std.testing.expectEqualStrings("{\"tasks\":[]}", definition);
+
+    const reused = try writeVerified(temporary.dir, std.testing.io, std.testing.allocator, source_digest, "{\"tasks\":[]}", "{\"dependencies\":[]}\n");
+    defer reused.deinit(std.testing.allocator);
+    try std.testing.expectEqual(first.definition_digest, reused.definition_digest);
+    try std.testing.expectError(error.ArtifactConflict, writeVerified(temporary.dir, std.testing.io, std.testing.allocator, source_digest, "{\"tasks\":[\"changed\"]}", "{\"dependencies\":[]}\n"));
+
+    const dependency_path = ".ztasks/sources/" ++ "a" ** 64 ++ "/dependencies.json";
+    try temporary.dir.deleteFile(std.testing.io, dependency_path);
+    const resumed = try writeVerified(temporary.dir, std.testing.io, std.testing.allocator, source_digest, "{\"tasks\":[]}", "{\"dependencies\":[]}\n");
+    defer resumed.deinit(std.testing.allocator);
+    const dependency = try temporary.dir.readFileAlloc(std.testing.io, dependency_path, std.testing.allocator, .limited(4096));
+    defer std.testing.allocator.free(dependency);
+    try std.testing.expectEqualStrings("{\"dependencies\":[]}\n", dependency);
+}
+
+test "source artifact key requires lowercase complete sha256" {
+    try std.testing.expectError(error.InvalidSourceDigest, writeVerified(std.Io.Dir.cwd(), std.testing.io, std.testing.allocator, "sha256:" ++ "A" ** 64, "{}", "{}"));
+    try std.testing.expectError(error.InvalidSourceDigest, writeVerified(std.Io.Dir.cwd(), std.testing.io, std.testing.allocator, "sha256:short", "{}", "{}"));
 }

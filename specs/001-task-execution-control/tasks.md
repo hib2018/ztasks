@@ -182,31 +182,31 @@ delete the snapshot, inject storage failures, and verify exact source.synced Eve
 
 ### Tests for User Story 4
 
-- [ ] T084 [P] [US4] Write content-addressed Definition and dependency artifact verify/reuse/interruption tests in `core/src/storage/source_artifact_store.zig` (depends on T067)
-- [ ] T085 [P] [US4] Write project.initialized and source.synced payload, dependency-artifact digest, and change-set tests in `core/src/domain/event.zig` (depends on T067)
-- [ ] T086 [P] [US4] Write added/changed/missing/reappeared/no-change sync projection tests in `core/src/application/sync.zig` (depends on T067)
-- [ ] T087 [US4] Write invalid-source and failed-artifact/Event persistence rollback tests in `core/src/application/sync.zig` (depends on T086)
-- [ ] T088 [P] [US4] Write exact project.init/source.sync operation/Event mapping tests in `core/src/application/operation_map.zig` (depends on T067)
-- [ ] T089 [P] [US4] Create init, sync, inspect, and health Protocol fixtures in `protocol/fixtures/v1/project.jsonl` (depends on T067)
-- [ ] T090 [P] [US4] Write corrupt history, stale snapshot, orphan artifact, and filesystem diagnostic tests in `core/src/application/doctor.zig` (depends on T067)
-- [ ] T091 [P] [US4] Write init/sync/doctor/help/version CLI tests in `app/internal/cli/project_test.go` (depends on T067)
-- [ ] T092 [P] [US4] Write view selection/filter preference round-trip tests in `app/internal/tui/model/view_store_test.go` (depends on T067)
+- [X] T084 [P] [US4] Write content-addressed Definition and dependency artifact verify/reuse/interruption tests in `core/src/storage/source_artifact_store.zig` (depends on T067)
+- [X] T085 [P] [US4] Write project.initialized and source.synced payload, dependency-artifact digest, and change-set tests in `core/src/domain/event.zig` (depends on T067)
+- [X] T086 [P] [US4] Write added/changed/missing/reappeared/no-change sync projection tests in `core/src/application/sync.zig` (depends on T067)
+- [X] T087 [US4] Write invalid-source and failed-artifact/Event persistence rollback tests in `core/src/application/sync.zig` (depends on T086)
+- [X] T088 [P] [US4] Write exact project.init/source.sync operation/Event mapping tests in `core/src/application/operation_map.zig` (depends on T067)
+- [X] T089 [P] [US4] Create init, sync, inspect, and health Protocol fixtures in `protocol/fixtures/v1/project.jsonl` (depends on T067)
+- [X] T090 [P] [US4] Write corrupt history, stale snapshot, orphan artifact, and filesystem diagnostic tests in `core/src/application/doctor.zig` (depends on T067)
+- [X] T091 [P] [US4] Write init/sync/doctor/help/version CLI tests in `app/internal/cli/project_test.go` (depends on T067)
+- [X] T092 [P] [US4] Write view selection/filter preference round-trip tests in `app/internal/tui/model/view_store_test.go` (depends on T067)
 
 ### Implementation for User Story 4
 
-- [ ] T093 [US4] Implement verified content-addressed Definition batch and dependency JSON writes in `core/src/storage/source_artifact_store.zig` (depends on T067)
-- [ ] T094 [US4] Implement project.initialized and source.synced typed payloads with both artifact digests in `core/src/domain/event.zig` (depends on T067)
-- [ ] T095 [US4] Implement Project initialization without modifying Task source in `core/src/application/project_init.zig` (depends on T067)
-- [ ] T096 [US4] Implement atomic sync diff, missing/reattach projection, and no-change Event creation in `core/src/application/sync.zig` (depends on T067)
-- [ ] T097 [US4] Enforce artifact-sync before Event commit and inert unreferenced-artifact recovery in `core/src/application/sync.zig` (depends on T067)
-- [ ] T098 [US4] Extend the operation/Event mapping for project.init and source.sync in `core/src/application/operation_map.zig` (depends on T067)
-- [ ] T099 [US4] Connect project.init, source.sync, project.inspect, and health.check in `core/src/protocol/handler.zig` (depends on T067)
-- [ ] T100 [US4] Implement source/history/snapshot/artifact/lock/filesystem diagnostics in `core/src/application/doctor.zig` (depends on T067)
-- [ ] T101 [US4] Implement init, sync, doctor, help, and version commands with actionable errors in `app/internal/cli/project.go` (depends on T067)
-- [ ] T102 [US4] Implement Runtime-independent atomic TUI preferences in `app/internal/tui/model/view_store.go` (depends on T067)
-- [ ] T103 [US4] Render missing Definitions, sync diffs, warnings, and stale activity in `app/internal/tui/view/view.go` (depends on T067)
-- [ ] T104 [US4] Add sync/orphan/reattach/restart and rejected-sync E2E coverage in `tests/e2e/recovery_test.go` (depends on T067)
-- [ ] T105 [US4] Add Event-committed/snapshot-failed and artifact-written/Event-failed crash scenarios in `tests/e2e/crash_recovery_test.go` (depends on T067)
+- [X] T093 [US4] Implement verified content-addressed Definition batch and dependency JSON writes in `core/src/storage/source_artifact_store.zig` (depends on T067)
+- [X] T094 [US4] Implement project.initialized and source.synced typed payloads with both artifact digests in `core/src/domain/event.zig` (depends on T067)
+- [X] T095 [US4] Implement Project initialization without modifying Task source in `core/src/application/project_init.zig` (depends on T067)
+- [X] T096 [US4] Implement atomic sync diff, missing/reattach projection, and no-change Event creation in `core/src/application/sync.zig` (depends on T067)
+- [X] T097 [US4] Enforce artifact-sync before Event commit and inert unreferenced-artifact recovery in `core/src/application/sync.zig` (depends on T067)
+- [X] T098 [US4] Extend the operation/Event mapping for project.init and source.sync in `core/src/application/operation_map.zig` (depends on T067)
+- [X] T099 [US4] Connect project.init, source.sync, project.inspect, and health.check in `core/src/protocol/handler.zig` (depends on T067)
+- [X] T100 [US4] Implement source/history/snapshot/artifact/lock/filesystem diagnostics in `core/src/application/doctor.zig` (depends on T067)
+- [X] T101 [US4] Implement init, sync, doctor, help, and version commands with actionable errors in `app/internal/cli/project.go` (depends on T067)
+- [X] T102 [US4] Implement Runtime-independent atomic TUI preferences in `app/internal/tui/model/view_store.go` (depends on T067)
+- [X] T103 [US4] Render missing Definitions, sync diffs, warnings, and stale activity in `app/internal/tui/view/view.go` (depends on T067)
+- [X] T104 [US4] Add sync/orphan/reattach/restart and rejected-sync E2E coverage in `tests/e2e/recovery_test.go` (depends on T067)
+- [X] T105 [US4] Add Event-committed/snapshot-failed and artifact-written/Event-failed crash scenarios in `tests/e2e/crash_recovery_test.go` (depends on T067)
 
 **Checkpoint**: Every accepted sync is auditable and reconstructible; rejected syncs preserve prior authority.
 
@@ -221,21 +221,21 @@ operate on two fixture Projects, and verify missing/mismatched components fail b
 
 ### Tests for User Story 5
 
-- [ ] T106 [P] [US5] Write bundled-Core discovery precedence and missing-component tests in `app/internal/coreclient/discovery_test.go` (depends on T105)
-- [ ] T107 [P] [US5] Write product/protocol/data compatibility handshake tests in `core/src/protocol/compatibility.zig` (depends on T105)
-- [ ] T108 [P] [US5] Write Frontend mismatch refusal and actionable guidance tests in `app/internal/coreclient/compatibility_test.go` (depends on T105)
-- [ ] T109 [P] [US5] Add clean-prefix, no-toolchain, two-Project isolation install tests in `tests/e2e/install_test.go` (depends on T105)
+- [X] T106 [P] [US5] Write bundled-Core discovery precedence and missing-component tests in `app/internal/coreclient/discovery_test.go` (depends on T105)
+- [X] T107 [P] [US5] Write product/protocol/data compatibility handshake tests in `core/src/protocol/compatibility.zig` (depends on T105)
+- [X] T108 [P] [US5] Write Frontend mismatch refusal and actionable guidance tests in `app/internal/coreclient/compatibility_test.go` (depends on T105)
+- [X] T109 [P] [US5] Add clean-prefix, no-toolchain, two-Project isolation install tests in `tests/e2e/install_test.go` (depends on T105)
 
 ### Implementation for User Story 5
 
-- [ ] T110 [US5] Implement Core product/protocol/data capability reporting in `core/src/protocol/compatibility.zig` (depends on T105)
-- [ ] T111 [US5] Implement bundled Core discovery relative to the Frontend installation in `app/internal/coreclient/discovery.go` (depends on T105)
-- [ ] T112 [US5] Enforce compatibility handshake before Project Runtime mutations in `app/internal/coreclient/compatibility.go` (depends on T105)
-- [ ] T113 [US5] Add missing/incompatible component guidance to version and doctor in `app/internal/cli/project.go` (depends on T105)
-- [ ] T114 [US5] Create macOS/Linux two-binary archive assembly and checksum generation in `scripts/package.sh` (depends on T105)
-- [ ] T115 [US5] Create user-prefix install/update/uninstall helper with explicit targets in `scripts/install.sh` (depends on T105)
-- [ ] T116 [US5] Document one-time installation, layout, upgrades, and Project isolation in `docs/install.md` (depends on T105)
-- [ ] T117 [US5] Run the packaged binaries against two fixture Projects and record evidence in `specs/001-task-execution-control/quickstart.md` (depends on T105)
+- [X] T110 [US5] Implement Core product/protocol/data capability reporting in `core/src/protocol/compatibility.zig` (depends on T105)
+- [X] T111 [US5] Implement bundled Core discovery relative to the Frontend installation in `app/internal/coreclient/discovery.go` (depends on T105)
+- [X] T112 [US5] Enforce compatibility handshake before Project Runtime mutations in `app/internal/coreclient/compatibility.go` (depends on T105)
+- [X] T113 [US5] Add missing/incompatible component guidance to version and doctor in `app/internal/cli/project.go` (depends on T105)
+- [X] T114 [US5] Create macOS/Linux two-binary archive assembly and checksum generation in `scripts/package.sh` (depends on T105)
+- [X] T115 [US5] Create user-prefix install/update/uninstall helper with explicit targets in `scripts/install.sh` (depends on T105)
+- [X] T116 [US5] Document one-time installation, layout, upgrades, and Project isolation in `docs/install.md` (depends on T105)
+- [X] T117 [US5] Run the packaged binaries against two fixture Projects and record evidence in `specs/001-task-execution-control/quickstart.md` (depends on T105)
 
 **Checkpoint**: One installation serves multiple Projects without source clone or per-Project toolchains.
 
@@ -245,16 +245,16 @@ operate on two fixture Projects, and verify missing/mismatched components fail b
 
 **Purpose**: Verify performance, security, documentation, and end-to-end contract consistency.
 
-- [ ] T118 [P] Add a 500-Task/10,000-Event two-second performance test in `tests/e2e/performance_test.go` (depends on T083, T105, T117)
-- [ ] T119 [P] Add cross-surface recognized-secret absence, prohibited-field, non-echo, and pre/post-redaction boundary regression tests in `tests/e2e/content_policy_test.go` (depends on T083, T105, T117)
-- [ ] T120 [P] Add narrow-terminal, resize, Unicode wrapping, and keyboard navigation tests in `app/internal/tui/view/view_test.go` (depends on T083, T105, T117)
-- [ ] T121 [P] Add fuzz/property coverage for dependency extraction, Protocol decoding, and Event replay in `core/src/root.zig` (depends on T083, T105, T117)
-- [ ] T122 [P] Document CLI/TUI workflow, Runtime storage, audit retention, and `.gitignore` guidance in `README.md` and `docs/guide.md` (depends on T083, T105, T117)
-- [ ] T123 [P] Publish dependency extraction/JSON, operation/Event, source adapter, and redaction responsibility contracts in `protocol/README.md` and `docs/development.md` (depends on T083, T105, T117)
-- [ ] T124 Add a contract consistency check covering documented operations, Events, fixtures, and Core mappings in `tests/contract/mapping_test.go` (depends on T083, T105, T117)
-- [ ] T125 Run `zig fmt --check`, Core tests, Go tests, race tests, and all E2E tests and record results in `specs/001-task-execution-control/quickstart.md` (depends on T083, T105, T117)
-- [ ] T126 Run every quickstart validation in isolated Projects and record timings and constraints in `specs/001-task-execution-control/quickstart.md` (depends on T083, T105, T117)
-- [ ] T127 Review generated binaries and diagnostics for recognized fixture secrets, prohibited private-reasoning fields, and accidental value echo in `tests/e2e/content_policy_test.go` (depends on T083, T105, T117)
+- [X] T118 [P] Add a 500-Task/10,000-Event two-second performance test in `tests/e2e/performance_test.go` (depends on T083, T105, T117)
+- [X] T119 [P] Add cross-surface recognized-secret absence, prohibited-field, non-echo, and pre/post-redaction boundary regression tests in `tests/e2e/content_policy_test.go` (depends on T083, T105, T117)
+- [X] T120 [P] Add narrow-terminal, resize, Unicode wrapping, and keyboard navigation tests in `app/internal/tui/view/view_test.go` (depends on T083, T105, T117)
+- [X] T121 [P] Add fuzz/property coverage for dependency extraction, Protocol decoding, and Event replay in `core/src/root.zig` (depends on T083, T105, T117)
+- [X] T122 [P] Document CLI/TUI workflow, Runtime storage, audit retention, and `.gitignore` guidance in `README.md` and `docs/guide.md` (depends on T083, T105, T117)
+- [X] T123 [P] Publish dependency extraction/JSON, operation/Event, source adapter, and redaction responsibility contracts in `protocol/README.md` and `docs/development.md` (depends on T083, T105, T117)
+- [X] T124 Add a contract consistency check covering documented operations, Events, fixtures, and Core mappings in `tests/contract/mapping_test.go` (depends on T083, T105, T117)
+- [X] T125 Run `zig fmt --check`, Core tests, Go tests, race tests, and all E2E tests and record results in `specs/001-task-execution-control/quickstart.md` (depends on T083, T105, T117)
+- [X] T126 Run every quickstart validation in isolated Projects and record timings and constraints in `specs/001-task-execution-control/quickstart.md` (depends on T083, T105, T117)
+- [X] T127 Review generated binaries and diagnostics for recognized fixture secrets, prohibited private-reasoning fields, and accidental value echo in `tests/e2e/content_policy_test.go` (depends on T083, T105, T117)
 
 ---
 

@@ -11,6 +11,10 @@ const operation_map = @import("../application/operation_map.zig");
 const event_log = @import("../storage/event_log.zig");
 const project_lock = @import("../storage/lock.zig");
 const snapshot_store = @import("../storage/snapshot.zig");
+const project_init = @import("../application/project_init.zig");
+const sync_application = @import("../application/sync.zig");
+const doctor_application = @import("../application/doctor.zig");
+const compatibility = @import("compatibility.zig");
 
 pub const Context = struct {
     allocator: std.mem.Allocator,
@@ -34,8 +38,10 @@ pub fn handleLine(context: Context, line: []const u8) ![]u8 {
 
     if (std.mem.eql(u8, request.value.op, "version.get")) {
         return encodeSuccess(context.allocator, request.value.request_id, .{
-            .protocol_version = @as(u8, 1),
-            .capabilities = [_][]const u8{ "source.validate", "task.list", "task.show" },
+            .product_version = compatibility.product_version,
+            .protocol_version = compatibility.protocol_version,
+            .data_version = compatibility.data_version,
+            .capabilities = [_][]const u8{ "project.init", "source.sync", "project.inspect", "health.check", "source.validate", "task.list", "task.show" },
         });
     }
     if (std.mem.eql(u8, request.value.op, "source.validate") or
@@ -56,6 +62,23 @@ pub fn handleLine(context: Context, line: []const u8) ![]u8 {
     if (std.mem.eql(u8, request.value.op, "event.list")) {
         return handleEventList(context, request.value) catch
             return response_protocol.encodeError(context.allocator, request.value.request_id, .store_corrupt, .{});
+    }
+    if (std.mem.eql(u8, request.value.op, "project.inspect") or std.mem.eql(u8, request.value.op, "health.check")) {
+        return handleProjectQuery(context, request.value) catch
+            return response_protocol.encodeError(context.allocator, request.value.request_id, .store_corrupt, .{});
+    }
+    if (std.mem.eql(u8, request.value.op, "project.init") or std.mem.eql(u8, request.value.op, "source.sync")) {
+        return handleProjectMutation(context, request.value) catch |err| {
+            const code: response_protocol.ErrorCode = switch (err) {
+                error.SourceNotFound => .source_not_found,
+                error.SourceAmbiguous => .source_ambiguous,
+                error.IdempotencyConflict => .idempotency_conflict,
+                error.StoreLocked => .store_locked,
+                error.AlreadyInitialized, error.NotInitialized => .invalid_transition,
+                else => .io_error,
+            };
+            return response_protocol.encodeError(context.allocator, request.value.request_id, code, .{});
+        };
     }
     const mapping = query.classify(request.value.op) catch
         return response_protocol.encodeError(context.allocator, request.value.request_id, .unknown_operation, .{});
@@ -169,8 +192,8 @@ const StoredEvent = struct {
     task_id: ?[]const u8,
     session_id: ?[]const u8,
     payload: std.json.Value,
-    status_after: []const u8,
-    attempt_after: u32,
+    status_after: ?[]const u8 = null,
+    attempt_after: u32 = 0,
     redactions: []const content_policy.Redaction,
 };
 
@@ -240,7 +263,7 @@ fn runtimeFor(allocator: std.mem.Allocator, batch: anytype, history: *const Hist
     for (history.items) |item| {
         if (item.event.value.task_id) |event_task_id| {
             if (std.mem.eql(u8, event_task_id, task_id)) {
-                status = runtime_domain.RuntimeStatus.parse(item.event.value.status_after) orelse return error.StoreCorrupt;
+                status = runtime_domain.RuntimeStatus.parse(item.event.value.status_after orelse return error.StoreCorrupt) orelse return error.StoreCorrupt;
                 attempt = item.event.value.attempt_after;
                 if (std.mem.eql(u8, item.event.value.type, "task.started")) {
                     agent = item.event.value.actor.id;
@@ -267,7 +290,7 @@ fn latestStatus(history: *const History, task_id: []const u8) ?runtime_domain.Ru
     var result: ?runtime_domain.RuntimeStatus = null;
     for (history.items) |item| {
         if (item.event.value.task_id) |event_task_id| {
-            if (std.mem.eql(u8, event_task_id, task_id)) result = runtime_domain.RuntimeStatus.parse(item.event.value.status_after);
+            if (std.mem.eql(u8, event_task_id, task_id)) result = runtime_domain.RuntimeStatus.parse(item.event.value.status_after orelse continue);
         }
     }
     return result;
@@ -490,6 +513,266 @@ fn handleEventList(context: Context, request: request_protocol.Request) ![]u8 {
         try events.append(context.allocator, item.event.value);
     }
     return encodeSuccess(context.allocator, request.request_id, .{ .events = events.items });
+}
+
+const StoredDefinitionTask = struct {
+    id: []const u8,
+    title: []const u8,
+    phase_id: []const u8,
+    order: u32,
+    dependencies: []const []const u8,
+    parallel_hint: bool,
+    story: ?[]const u8,
+    fingerprint: []const u8,
+};
+
+const StoredDefinition = struct {
+    version: u8,
+    source: std.json.Value,
+    phases: std.json.Value,
+    tasks: []const StoredDefinitionTask,
+};
+
+const PriorCatalog = struct {
+    items: []sync_application.Prior,
+
+    fn deinit(self: PriorCatalog, allocator: std.mem.Allocator) void {
+        for (self.items) |item| {
+            allocator.free(item.id);
+            allocator.free(item.fingerprint);
+        }
+        allocator.free(self.items);
+    }
+};
+
+const ProjectEventPayload = struct {
+    previous_digest: ?[]const u8,
+    source_digest: []const u8,
+    definition_ref: []const u8,
+    definition_digest: []const u8,
+    dependency_digest: []const u8,
+    added: []const []const u8,
+    changed: []const []const u8,
+    missing: []const []const u8,
+    reappeared: []const []const u8,
+};
+
+fn handleProjectMutation(context: Context, request: request_protocol.Request) ![]u8 {
+    _ = try operation_map.map(request.op, request.actor.kind);
+    const project = try std.Io.Dir.openDirAbsolute(context.io, context.project_root, .{});
+    defer project.close(context.io);
+    var lock = try project_lock.ProjectLock.acquire(project, context.io);
+    defer lock.release();
+    var history = try loadHistory(context, project);
+    defer history.deinit(context.allocator);
+
+    const initialized = latestProjectEvent(&history) != null;
+    if (std.mem.eql(u8, request.op, "project.init") and initialized) return error.AlreadyInitialized;
+    if (std.mem.eql(u8, request.op, "source.sync") and !initialized) return error.NotInitialized;
+    const semantic_hash = command.semanticHash(request);
+    for (history.items) |item| {
+        if (!std.mem.eql(u8, item.record.value.request_id, request.request_id)) continue;
+        if (!std.mem.eql(u8, item.record.value.semantic_hash, &semantic_hash)) return error.IdempotencyConflict;
+        return encodeSuccess(context.allocator, request.request_id, .{ .event = item.event.value });
+    }
+
+    const locator_override = payloadStringValue(request.payload.object, "locator");
+    const locator = if (locator_override) |value| try context.allocator.dupe(u8, value) else try resolveLocator(context);
+    defer context.allocator.free(locator);
+    const markdown = project.readFileAlloc(context.io, locator, context.allocator, .limited(4 * 1024 * 1024)) catch return error.SourceNotFound;
+    defer context.allocator.free(markdown);
+    var persisted = try project_init.persistSource(project, context.io, context.allocator, locator, markdown);
+    defer persisted.deinit(context.allocator);
+
+    var changes = sync_application.ChangeSet{
+        .added = try context.allocator.alloc([]const u8, 0),
+        .changed = try context.allocator.alloc([]const u8, 0),
+        .missing = try context.allocator.alloc([]const u8, 0),
+        .reappeared = try context.allocator.alloc([]const u8, 0),
+    };
+    defer changes.deinit(context.allocator);
+    var previous_digest: []const u8 = "";
+    if (latestProjectEvent(&history)) |prior_event| {
+        previous_digest = payloadStringFromValue(prior_event.payload, "source_digest") orelse return error.StoreCorrupt;
+        const prior_catalog = try buildPriorCatalog(context, project, &history);
+        defer prior_catalog.deinit(context.allocator);
+        var definition = try std.json.parseFromSlice(StoredDefinition, context.allocator, persisted.definition_json, .{ .ignore_unknown_fields = false, .allocate = .alloc_always });
+        defer definition.deinit();
+        const current = try context.allocator.alloc(sync_application.Definition, definition.value.tasks.len);
+        defer context.allocator.free(current);
+        for (definition.value.tasks, 0..) |task, index| current[index] = .{ .id = task.id, .fingerprint = task.fingerprint };
+        changes.deinit(context.allocator);
+        changes = try sync_application.diff(context.allocator, prior_catalog.items, current);
+    }
+
+    const seq: u64 = @intCast(history.items.len + 1);
+    const timestamp = try utcTimestamp(context.allocator, context.io);
+    defer context.allocator.free(timestamp);
+    const event_id = try std.fmt.allocPrint(context.allocator, "evt-{d}", .{seq});
+    defer context.allocator.free(event_id);
+    const event_type = if (std.mem.eql(u8, request.op, "project.init")) "project.initialized" else "source.synced";
+    const payload: ProjectEventPayload = if (std.mem.eql(u8, request.op, "project.init"))
+        .{
+            .previous_digest = @as(?[]const u8, null),
+            .source_digest = persisted.source_digest[0..],
+            .definition_ref = persisted.artifacts.definition_ref,
+            .definition_digest = persisted.artifacts.definition_digest[0..],
+            .dependency_digest = persisted.artifacts.dependency_digest[0..],
+            .added = &.{},
+            .changed = &.{},
+            .missing = &.{},
+            .reappeared = &.{},
+        }
+    else
+        .{
+            .previous_digest = @as(?[]const u8, previous_digest),
+            .source_digest = persisted.source_digest[0..],
+            .definition_ref = persisted.artifacts.definition_ref,
+            .definition_digest = persisted.artifacts.definition_digest[0..],
+            .dependency_digest = persisted.artifacts.dependency_digest[0..],
+            .added = changes.added,
+            .changed = changes.changed,
+            .missing = changes.missing,
+            .reappeared = changes.reappeared,
+        };
+    const encoded = try std.json.Stringify.valueAlloc(context.allocator, .{
+        .version = @as(u8, 1),
+        .event_id = event_id,
+        .seq = seq,
+        .request_id = request.request_id,
+        .timestamp = timestamp,
+        .actor = request.actor,
+        .type = event_type,
+        .task_id = @as(?[]const u8, null),
+        .session_id = @as(?[]const u8, null),
+        .payload = payload,
+        .status_after = @as(?[]const u8, null),
+        .attempt_after = @as(u32, 0),
+        .redactions = [_]content_policy.Redaction{},
+    }, .{});
+    defer context.allocator.free(encoded);
+    _ = try event_log.appendPersistent(project, context.io, context.allocator, request.request_id, &semantic_hash, encoded);
+    var stored_event = try std.json.parseFromSlice(StoredEvent, context.allocator, encoded, .{ .ignore_unknown_fields = false, .allocate = .alloc_always });
+    defer stored_event.deinit();
+    return encodeSuccess(context.allocator, request.request_id, .{ .event = stored_event.value });
+}
+
+fn handleProjectQuery(context: Context, request: request_protocol.Request) ![]u8 {
+    const project = try std.Io.Dir.openDirAbsolute(context.io, context.project_root, .{});
+    defer project.close(context.io);
+    if (std.mem.eql(u8, request.op, "health.check")) return handleHealthCheck(context, request, project);
+    var history = try loadHistory(context, project);
+    defer history.deinit(context.allocator);
+    const latest = latestProjectEvent(&history);
+    if (std.mem.eql(u8, request.op, "project.inspect")) {
+        return encodeSuccess(context.allocator, request.request_id, .{
+            .initialized = latest != null,
+            .last_event_seq = history.items.len,
+            .source_digest = if (latest) |item| payloadStringFromValue(item.payload, "source_digest") else null,
+            .definition_ref = if (latest) |item| payloadStringFromValue(item.payload, "definition_ref") else null,
+        });
+    }
+    unreachable;
+}
+
+fn handleHealthCheck(context: Context, request: request_protocol.Request, project: std.Io.Dir) ![]u8 {
+    var probe = doctor_application.Probe{};
+    var event_count: usize = 0;
+    var initialized = false;
+    var history = loadHistory(context, project) catch {
+        probe.history_valid = false;
+        const report = try doctor_application.diagnose(context.allocator, probe);
+        defer report.deinit(context.allocator);
+        return encodeSuccess(context.allocator, request.request_id, .{
+            .healthy = report.healthy(),
+            .event_count = event_count,
+            .initialized = initialized,
+            .diagnostics = report.diagnostics,
+        });
+    };
+    defer history.deinit(context.allocator);
+    event_count = history.items.len;
+    initialized = latestProjectEvent(&history) != null;
+
+    const snapshot_bytes = project.readFileAlloc(context.io, ".ztasks/state.json", context.allocator, .limited(16 * 1024 * 1024)) catch |err| switch (err) {
+        error.FileNotFound => null,
+        else => blk: {
+            probe.snapshot_present = true;
+            probe.snapshot_current = false;
+            break :blk null;
+        },
+    };
+    if (snapshot_bytes) |bytes| {
+        defer context.allocator.free(bytes);
+        probe.snapshot_present = true;
+        var snapshot = snapshot_store.Snapshot.decode(context.allocator, bytes) catch null;
+        if (snapshot) |*parsed| {
+            defer parsed.deinit();
+            probe.snapshot_current = parsed.value.last_seq == event_count;
+        } else probe.snapshot_current = false;
+    }
+    const report = try doctor_application.diagnose(context.allocator, probe);
+    defer report.deinit(context.allocator);
+    return encodeSuccess(context.allocator, request.request_id, .{
+        .healthy = report.healthy(),
+        .event_count = event_count,
+        .initialized = initialized,
+        .diagnostics = report.diagnostics,
+    });
+}
+
+fn latestProjectEvent(history: *const History) ?StoredEvent {
+    var index = history.items.len;
+    while (index > 0) {
+        index -= 1;
+        const item = history.items[index].event.value;
+        if (std.mem.eql(u8, item.type, "project.initialized") or std.mem.eql(u8, item.type, "source.synced")) return item;
+    }
+    return null;
+}
+
+fn payloadStringFromValue(payload: std.json.Value, key: []const u8) ?[]const u8 {
+    if (payload != .object) return null;
+    const value = payload.object.get(key) orelse return null;
+    return if (value == .string) value.string else null;
+}
+
+fn buildPriorCatalog(context: Context, project: std.Io.Dir, history: *const History) !PriorCatalog {
+    var items: std.ArrayList(sync_application.Prior) = .empty;
+    errdefer {
+        for (items.items) |item| {
+            context.allocator.free(item.id);
+            context.allocator.free(item.fingerprint);
+        }
+        items.deinit(context.allocator);
+    }
+    var history_index = history.items.len;
+    var latest = true;
+    while (history_index > 0) {
+        history_index -= 1;
+        const event = history.items[history_index].event.value;
+        if (!std.mem.eql(u8, event.type, "project.initialized") and !std.mem.eql(u8, event.type, "source.synced")) continue;
+        const reference = payloadStringFromValue(event.payload, "definition_ref") orelse return error.StoreCorrupt;
+        const bytes = try project.readFileAlloc(context.io, reference, context.allocator, .limited(16 * 1024 * 1024));
+        defer context.allocator.free(bytes);
+        var document = std.json.parseFromSlice(StoredDefinition, context.allocator, bytes, .{ .ignore_unknown_fields = false, .allocate = .alloc_always }) catch return error.StoreCorrupt;
+        defer document.deinit();
+        for (document.value.tasks) |task| {
+            var exists = false;
+            for (items.items) |item| if (std.mem.eql(u8, item.id, task.id)) {
+                exists = true;
+                break;
+            };
+            if (exists) continue;
+            try items.append(context.allocator, .{
+                .id = try context.allocator.dupe(u8, task.id),
+                .fingerprint = try context.allocator.dupe(u8, task.fingerprint),
+                .missing = !latest,
+            });
+        }
+        latest = false;
+    }
+    return .{ .items = try items.toOwnedSlice(context.allocator) };
 }
 
 fn prefixIdentity(bytes: []const u8) [71]u8 {

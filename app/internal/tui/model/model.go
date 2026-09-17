@@ -17,6 +17,16 @@ type Activity struct {
 	Type   string
 	TaskID string
 	Detail string
+	Stale  bool
+}
+
+type ProjectStatus struct {
+	DefinitionMissing bool
+	SyncAdded         []string
+	SyncChanged       []string
+	SyncMissing       []string
+	SyncReappeared    []string
+	Warnings          []string
 }
 
 type Intervention struct {
@@ -33,6 +43,7 @@ type Model struct {
 	filter        string
 	activity      []Activity
 	interventions []Intervention
+	project       ProjectStatus
 	width, height int
 }
 
@@ -93,6 +104,10 @@ func (state *Model) SetInterventions(interventions []Intervention) {
 func (state *Model) Interventions() []Intervention {
 	return append([]Intervention(nil), state.interventions...)
 }
+
+func (state *Model) SetProjectStatus(status ProjectStatus) { state.project = status }
+
+func (state *Model) ProjectStatus() ProjectStatus { return state.project }
 
 func (state *Model) Visible() []Task {
 	visible := make([]Task, 0, len(state.visible))

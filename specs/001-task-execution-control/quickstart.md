@@ -134,6 +134,28 @@ does not undo an Event commit; concurrent mutation is serialized or returns `sto
 `ztasks status`, `ztasks comment T001 "manual review"`, `ztasks event list T001`, and
 `ztasks doctor` work without any Agent integration.
 
+## Packaged installation evidence (2026-09-17)
+
+The native macOS archive was installed into a clean temporary prefix and invoked with a restricted
+`PATH` containing no Go or Zig toolchain. The Frontend discovered the bundled Core, completed the
+product/Protocol/data handshake, and initialized two separate temporary Projects. Each Project
+created only its own `.ztasks/events.jsonl`; no Runtime paths or Events were shared. This scenario
+is automated by `tests/e2e/install_test.go`.
+
+## Release validation evidence (2026-09-17)
+
+- `zig fmt --check`, Zig Core tests, all Go tests, all contract/E2E tests, and `go test -race
+  ./...` passed.
+- The uncached 500-Task/10,000-Event performance scenario completed in 0.71 seconds (1.02 seconds
+  wall time including the Go test process), below the two-second product limit.
+- Quickstart scenarios ran in independent temporary Project roots. The packaged installation test
+  took about 12 seconds including archive construction; ordinary E2E scenarios completed within
+  the full suite's remaining few seconds. Cross-compilation still requires the release builder's
+  Go and Zig toolchains; installed archives require neither.
+- `strings` scans of both generated executables found none of the recognized fixture secret,
+  prohibited private-reasoning field, or rejected fixture value. The cross-surface regression also
+  verified non-echo in responses and Event history.
+
 Normative references: [protocol-v1.md](contracts/protocol-v1.md),
 [cli.md](contracts/cli.md), [dependency-extraction.md](contracts/dependency-extraction.md),
 [event-mapping.md](contracts/event-mapping.md), [redaction.md](contracts/redaction.md), and

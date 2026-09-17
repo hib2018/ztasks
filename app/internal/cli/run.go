@@ -33,22 +33,53 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stderr, "missing command")
 		return 2
 	}
+	if len(filtered) == 1 && filtered[0] == "help" {
+		_, _ = io.WriteString(stdout, Help)
+		return 0
+	}
+	if len(filtered) == 1 && filtered[0] == "version" {
+		fmt.Fprintln(stdout, VersionReport())
+		return 0
+	}
 
 	projectRoot, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintln(stderr, "cannot determine project root")
 		return 3
 	}
-	client, err := coreclient.Start(coreExecutable(projectRoot), projectRoot, "")
+	corePath, err := coreExecutable(projectRoot)
 	if err != nil {
-		fmt.Fprintln(stderr, "cannot start ztasks core")
+		fmt.Fprintln(stderr, err)
+		return 3
+	}
+	client, err := coreclient.Start(corePath, projectRoot, "")
+	if err != nil {
+		fmt.Fprintln(stderr, "cannot start ztasks Core; reinstall the matching ztasks archive")
 		return 3
 	}
 	defer client.Close()
+	if err := coreclient.VerifyCompatibility(client); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 3
+	}
 
 	requestID := newRequestID()
 	var output string
 	switch {
+	case len(filtered) >= 1 && (filtered[0] == "init" || filtered[0] == "sync" || filtered[0] == "doctor"):
+		if len(filtered) > 2 || (filtered[0] == "doctor" && len(filtered) != 1) {
+			err = fmt.Errorf("usage: ztasks %s [tasks.md]", filtered[0])
+			break
+		}
+		locator := ""
+		if len(filtered) == 2 {
+			locator = filtered[1]
+		}
+		result, projectErr := Execute(client, BuildProjectRequest(requestID, filtered[0], locator))
+		if projectErr == nil {
+			output, projectErr = RenderProjectResult(filtered[0], result, machineReadable)
+		}
+		err = projectErr
 	case len(filtered) == 1 && filtered[0] == "tui":
 		status, fetchErr := FetchStatus(client, requestID)
 		if fetchErr != nil {
@@ -168,17 +199,20 @@ func flagValues(arguments []string) map[string]string {
 	return values
 }
 
-func coreExecutable(projectRoot string) string {
+func coreExecutable(projectRoot string) (string, error) {
 	if configured := os.Getenv("ZTASKS_CORE"); configured != "" {
-		return configured
+		return coreclient.DiscoverCore("", configured)
 	}
 	if executable, err := os.Executable(); err == nil {
-		sibling := filepath.Join(filepath.Dir(executable), "ztasks-core")
-		if _, err := os.Stat(sibling); err == nil {
-			return sibling
+		if discovered, discoverErr := coreclient.DiscoverCore(executable, ""); discoverErr == nil {
+			return discovered, nil
 		}
 	}
-	return filepath.Join(projectRoot, "core", "zig-out", "bin", "ztasks-core")
+	developerCore := filepath.Join(projectRoot, "core", "zig-out", "bin", "ztasks-core")
+	if info, err := os.Stat(developerCore); err == nil && info.Mode().IsRegular() {
+		return developerCore, nil
+	}
+	return "", coreclient.ErrCoreNotFound
 }
 
 func newRequestID() string {

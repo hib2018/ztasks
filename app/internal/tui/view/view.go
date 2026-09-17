@@ -9,6 +9,16 @@ import (
 
 func Render(state *model.Model) string {
 	var output strings.Builder
+	project := state.ProjectStatus()
+	if project.DefinitionMissing {
+		output.WriteString("DEFINITION MISSING — run ztasks sync after restoring tasks.md\n")
+	}
+	if len(project.SyncAdded)+len(project.SyncChanged)+len(project.SyncMissing)+len(project.SyncReappeared) != 0 {
+		fmt.Fprintf(&output, "Sync: +%s ~%s -%s ↻%s\n", strings.Join(project.SyncAdded, ","), strings.Join(project.SyncChanged, ","), strings.Join(project.SyncMissing, ","), strings.Join(project.SyncReappeared, ","))
+	}
+	for _, warning := range project.Warnings {
+		output.WriteString("Warning: " + warning + "\n")
+	}
 	width := state.Width()
 	if width <= 0 {
 		width = 100
@@ -32,7 +42,7 @@ func Render(state *model.Model) string {
 		} else if index == 2 && selected.CurrentAction != "" {
 			right = "Current action: " + selected.CurrentAction
 		}
-		fmt.Fprintf(&output, "%-*.*s │ %s\n", leftWidth, leftWidth, left, right)
+		fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, fit(left, leftWidth), right)
 	}
 	output.WriteString(strings.Repeat("─", leftWidth))
 	output.WriteString("─┼─")
@@ -46,6 +56,9 @@ func Render(state *model.Model) string {
 		left, right := "", ""
 		if index < len(activity) {
 			left = activity[index].Type + " " + activity[index].TaskID
+			if activity[index].Stale {
+				left = "[STALE] " + left
+			}
 			if activity[index].Detail != "" {
 				left += " — " + activity[index].Detail
 			}
@@ -61,7 +74,18 @@ func Render(state *model.Model) string {
 				right += " — " + item.Detail
 			}
 		}
-		fmt.Fprintf(&output, "%-*.*s │ %s\n", leftWidth, leftWidth, left, right)
+		fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, fit(left, leftWidth), right)
 	}
 	return output.String()
+}
+
+func fit(value string, limit int) string {
+	if limit <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= limit {
+		return value
+	}
+	return string(runes[:limit])
 }

@@ -62,5 +62,7 @@ func (monitor *Monitor) View() tea.View {
 		content += "\nFilter: " + monitor.filter
 	}
 	content += "\n↑/k ↓/j select  / filter  q quit"
-	return tea.NewView(content)
+	view := tea.NewView(content)
+	view.AltScreen = true
+	return view
 }

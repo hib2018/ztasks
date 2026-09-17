@@ -149,7 +149,8 @@ ztasks status
 ztasks task show T001
 ```
 
-引数なしの `ztasks` は TUI を起動します。
+引数なしの `ztasks` は、現在のshell画面を保ったままalternate screen bufferへ切り替え、
+端末前面を占有する全画面TUIを起動します。`q`または`Ctrl+C`で終了すると元のshell画面へ戻ります。
 
 ```sh
 ztasks

@@ -2,7 +2,8 @@
 
 ## General behavior
 
-- `ztasks` opens the interactive monitor.
+- `ztasks` opens the interactive monitor in the terminal's alternate screen buffer and restores the
+  previous shell screen when it exits.
 - Human-readable output is default; supported reads accept `--json`.
 - Usage, domain, and transport failures have distinct non-zero exit classes.
 - Machine-readable stdout contains one documented JSON value and no diagnostics.

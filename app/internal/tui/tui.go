@@ -49,6 +49,26 @@ func (monitor *Monitor) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.MoveUp})
 		case "down", "j":
 			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.MoveDown})
+		case "pgup", "ctrl+u":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.PageUp})
+		case "pgdown", "ctrl+d":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.PageDown})
+		case "home", "g":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.First})
+		case "end", "G":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.Last})
+		case "tab":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.FocusNext})
+		case "shift+tab":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.FocusPrevious})
+		case "left", "h":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.Collapse})
+		case "right", "l":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.Expand})
+		case "enter":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.TogglePhase})
+		case "z":
+			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.ToggleAll})
 		case "/":
 			monitor.filtering = true
 		}
@@ -61,7 +81,7 @@ func (monitor *Monitor) View() tea.View {
 	if monitor.filtering || monitor.filter != "" {
 		content += "\nFilter: " + monitor.filter
 	}
-	content += "\n↑/k ↓/j select  / filter  q quit"
+	content += "\nTab pane  ↑/k ↓/j scroll  PgUp/PgDn page  h/l fold  / filter  q quit"
 	view := tea.NewView(content)
 	view.AltScreen = true
 	return view

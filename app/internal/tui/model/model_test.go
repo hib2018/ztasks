@@ -28,3 +28,41 @@ func TestResizeRetainsSelection(t *testing.T) {
 		t.Fatal("resize changed selection or lost dimensions")
 	}
 }
+
+func TestTaskViewportFollowsSelectionAndPages(t *testing.T) {
+	tasks := make([]Task, 12)
+	for index := range tasks {
+		tasks[index] = Task{ID: "T" + string(rune('A'+index)), Phase: "Phase", Status: "ready"}
+	}
+	state := New(tasks)
+	state.SetViewportHeights(4, 3)
+	state.Page(1)
+	if state.Selected().ID != "TD" {
+		t.Fatalf("page selection = %q", state.Selected().ID)
+	}
+	viewport := state.Viewport(TaskPane)
+	if viewport.Offset == 0 {
+		t.Fatal("selection did not scroll task viewport")
+	}
+	state.Boundary(true)
+	if state.Selected().ID != "TL" {
+		t.Fatalf("end selection = %q", state.Selected().ID)
+	}
+}
+
+func TestPhaseTreeCollapsesAndCanReopen(t *testing.T) {
+	state := New([]Task{{ID: "T001", Phase: "Setup"}, {ID: "T002", Phase: "Setup"}, {ID: "T003", Phase: "Runtime"}})
+	if len(state.TreeRows()) != 5 {
+		t.Fatalf("expanded rows = %d", len(state.TreeRows()))
+	}
+	expand := false
+	state.ToggleSelectedPhase(&expand)
+	if rows := state.TreeRows(); len(rows) != 3 || rows[0].Kind != PhaseRow || rows[0].Expanded {
+		t.Fatalf("collapsed tree = %#v", rows)
+	}
+	expand = true
+	state.ToggleSelectedPhase(&expand)
+	if len(state.TreeRows()) != 5 {
+		t.Fatal("collapsed phase could not be reopened")
+	}
+}

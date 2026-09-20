@@ -5,6 +5,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/hib2018/ztasks/app/internal/tui/model"
 )
 
@@ -22,5 +23,44 @@ func TestRenderHandlesNarrowResizeUnicodeAndKeyboardSelectionState(t *testing.T)
 	state.Resize(120, 40)
 	if state.Selected().ID != "T002" {
 		t.Fatal("resize lost selection")
+	}
+}
+
+func TestRenderFramesEveryPaneAndMarksFocus(t *testing.T) {
+	state := model.New([]model.Task{{ID: "T001", Phase: "Setup", Title: "Work", Status: "ready"}})
+	state.Resize(100, 24)
+	state.SetActivity([]model.Activity{{Type: "task.started", TaskID: "T001"}})
+	state.SetInterventions([]model.Intervention{{Action: "pause", State: "pending"}})
+	output := Render(state)
+	for _, title := range []string{"[ Tasks ]", "Task Detail", "Activity", "Human Intervention"} {
+		if !strings.Contains(output, title) {
+			t.Fatalf("framed pane %q missing: %s", title, output)
+		}
+	}
+	if strings.Count(output, "┌") < 4 || strings.Count(output, "┘") < 4 {
+		t.Fatalf("not every pane is framed: %s", output)
+	}
+}
+
+func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
+	state := model.New([]model.Task{{ID: "T001", Phase: "日本語フェーズ", Title: "日本語の長い作業名", Status: "ready"}})
+	state.Resize(80, 24)
+	state.SetActivity([]model.Activity{{Type: "task.progress", TaskID: "T001", Detail: "実装しています🚀"}})
+	state.SetInterventions([]model.Intervention{{Action: "comment", State: "pending", Detail: "人間の確認待ち"}})
+
+	for number, line := range strings.Split(Render(state), "\n") {
+		if got := ansi.StringWidth(line); got != 80 {
+			t.Fatalf("line %d display width = %d, want 80: %q", number+1, got, line)
+		}
+	}
+}
+
+func TestFitUsesTerminalCellWidth(t *testing.T) {
+	got := fit("日本語abc", 7)
+	if width := ansi.StringWidth(got); width > 7 {
+		t.Fatalf("fit width = %d, want <= 7: %q", width, got)
+	}
+	if got != "日本語a" {
+		t.Fatalf("fit = %q, want %q", got, "日本語a")
 	}
 }

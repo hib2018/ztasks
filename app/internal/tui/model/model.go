@@ -3,138 +3,306 @@ package model
 import "strings"
 
 type Task struct {
-	ID                      string
-	Phase                   string
-	Title                   string
-	Status                  string
-	Agent                   string
-	SessionID               string
-	CurrentAction           string
-	UnsatisfiedDependencies []string
+	ID, Phase, Title, Status, Agent, SessionID, CurrentAction string
+	UnsatisfiedDependencies                                   []string
 }
-
 type Activity struct {
-	Type   string
-	TaskID string
-	Detail string
-	Stale  bool
+	Type, TaskID, Detail string
+	Stale                bool
 }
-
 type ProjectStatus struct {
-	DefinitionMissing bool
-	SyncAdded         []string
-	SyncChanged       []string
-	SyncMissing       []string
-	SyncReappeared    []string
-	Warnings          []string
+	DefinitionMissing                                             bool
+	SyncAdded, SyncChanged, SyncMissing, SyncReappeared, Warnings []string
 }
+type Intervention struct{ Action, State, Detail string }
 
-type Intervention struct {
-	Action string
-	State  string
-	Detail string
+type Pane int
+
+const (
+	TaskPane Pane = iota
+	DetailPane
+	ActivityPane
+	InterventionPane
+)
+
+type RowKind int
+
+const (
+	PhaseRow RowKind = iota
+	TaskRow
+)
+
+type TreeRow struct {
+	Kind     RowKind
+	Phase    string
+	Task     Task
+	Expanded bool
 }
+type Viewport struct{ Offset, Height int }
 
 type Model struct {
-	tasks         []Task
-	visible       []int
-	selected      int
-	selectedID    string
-	filter        string
-	activity      []Activity
-	interventions []Intervention
-	project       ProjectStatus
-	width, height int
+	tasks              []Task
+	visible            []int
+	selected           int
+	selectedID, filter string
+	activity           []Activity
+	interventions      []Intervention
+	project            ProjectStatus
+	collapsed          map[string]bool
+	lastCollapsed      string
+	focused            Pane
+	viewports          [4]Viewport
+	width, height      int
 }
 
 func New(tasks []Task) *Model {
-	state := &Model{tasks: append([]Task(nil), tasks...)}
-	state.rebuildVisible()
-	return state
+	s := &Model{tasks: append([]Task(nil), tasks...), collapsed: map[string]bool{}}
+	s.rebuildVisible()
+	return s
 }
-
-func (state *Model) Move(delta int) {
-	if len(state.visible) == 0 {
-		return
-	}
-	state.selected += delta
-	if state.selected < 0 {
-		state.selected = 0
-	}
-	if state.selected >= len(state.visible) {
-		state.selected = len(state.visible) - 1
-	}
-	state.selectedID = state.Selected().ID
-}
-
-func (state *Model) Filter(query string) {
-	state.filter = strings.TrimSpace(strings.ToLower(query))
-	state.rebuildVisible()
-}
-
-func (state *Model) Resize(width, height int) {
-	state.width = max(0, width)
-	state.height = max(0, height)
-}
-
-func (state *Model) Width() int  { return state.width }
-func (state *Model) Height() int { return state.height }
-
-func (state *Model) Selected() Task {
-	if len(state.visible) == 0 {
+func (s *Model) Width() int      { return s.width }
+func (s *Model) Height() int     { return s.height }
+func (s *Model) Resize(w, h int) { s.width = max(0, w); s.height = max(0, h) }
+func (s *Model) Selected() Task {
+	if len(s.visible) == 0 {
 		return Task{}
 	}
-	return state.tasks[state.visible[state.selected]]
+	return s.tasks[s.visible[s.selected]]
 }
-
-func (state *Model) Detail() Task { return state.Selected() }
-
-func (state *Model) SetActivity(activity []Activity) {
-	state.activity = append([]Activity(nil), activity...)
+func (s *Model) Detail() Task             { return s.Selected() }
+func (s *Model) FilterValue() string      { return s.filter }
+func (s *Model) FocusedPane() Pane        { return s.focused }
+func (s *Model) Viewport(p Pane) Viewport { return s.viewports[p] }
+func (s *Model) SetActivity(v []Activity) { s.activity = append([]Activity(nil), v...) }
+func (s *Model) Activity() []Activity     { return append([]Activity(nil), s.activity...) }
+func (s *Model) SetInterventions(v []Intervention) {
+	s.interventions = append([]Intervention(nil), v...)
 }
-
-func (state *Model) Activity() []Activity {
-	return append([]Activity(nil), state.activity...)
+func (s *Model) Interventions() []Intervention {
+	return append([]Intervention(nil), s.interventions...)
 }
+func (s *Model) SetProjectStatus(v ProjectStatus) { s.project = v }
+func (s *Model) ProjectStatus() ProjectStatus     { return s.project }
 
-func (state *Model) SetInterventions(interventions []Intervention) {
-	state.interventions = append([]Intervention(nil), interventions...)
-}
-
-func (state *Model) Interventions() []Intervention {
-	return append([]Intervention(nil), state.interventions...)
-}
-
-func (state *Model) SetProjectStatus(status ProjectStatus) { state.project = status }
-
-func (state *Model) ProjectStatus() ProjectStatus { return state.project }
-
-func (state *Model) Visible() []Task {
-	visible := make([]Task, 0, len(state.visible))
-	for _, index := range state.visible {
-		visible = append(visible, state.tasks[index])
+func (s *Model) Move(delta int) {
+	if s.focused != TaskPane {
+		s.scroll(s.focused, delta)
+		return
 	}
-	return visible
+	if len(s.visible) == 0 {
+		return
+	}
+	s.selected = clamp(s.selected+delta, 0, len(s.visible)-1)
+	s.selectedID = s.Selected().ID
+	s.ensureVisible()
 }
-
-func (state *Model) rebuildVisible() {
-	state.visible = state.visible[:0]
-	for index, task := range state.tasks {
-		searchable := strings.ToLower(task.ID + " " + task.Phase + " " + task.Title + " " + task.Status)
-		if state.filter == "" || strings.Contains(searchable, state.filter) {
-			state.visible = append(state.visible, index)
+func (s *Model) Page(delta int) {
+	h := max(1, s.viewports[s.focused].Height)
+	if s.focused == TaskPane {
+		s.Move(delta * max(1, h-1))
+	} else {
+		s.scroll(s.focused, delta*h)
+	}
+}
+func (s *Model) Boundary(last bool) {
+	if s.focused == TaskPane {
+		if len(s.visible) == 0 {
+			return
+		}
+		if last {
+			s.selected = len(s.visible) - 1
+		} else {
+			s.selected = 0
+		}
+		s.selectedID = s.Selected().ID
+		s.ensureVisible()
+		return
+	}
+	if last {
+		s.viewports[s.focused].Offset = max(0, s.paneLength(s.focused)-s.viewports[s.focused].Height)
+	} else {
+		s.viewports[s.focused].Offset = 0
+	}
+}
+func (s *Model) Focus(delta int) {
+	n := int(InterventionPane) + 1
+	s.focused = Pane((int(s.focused) + delta + n) % n)
+}
+func (s *Model) Filter(q string) {
+	s.filter = strings.TrimSpace(strings.ToLower(q))
+	s.rebuildVisible()
+}
+func (s *Model) ToggleSelectedPhase(expand *bool) {
+	p := s.Selected().Phase
+	if expand != nil && *expand && s.lastCollapsed != "" && s.collapsed[s.lastCollapsed] {
+		p = s.lastCollapsed
+	}
+	if p == "" {
+		return
+	}
+	if expand == nil {
+		s.collapsed[p] = !s.collapsed[p]
+	} else {
+		s.collapsed[p] = !*expand
+	}
+	if s.collapsed[p] {
+		s.lastCollapsed = p
+	} else if s.lastCollapsed == p {
+		s.lastCollapsed = ""
+	}
+	s.rebuildVisible()
+}
+func (s *Model) ToggleAllPhases() {
+	all := true
+	for _, t := range s.tasks {
+		if !s.collapsed[t.Phase] {
+			all = false
+			break
 		}
 	}
-	state.selected = 0
-	if state.selectedID != "" {
-		for index, taskIndex := range state.visible {
-			if state.tasks[taskIndex].ID == state.selectedID {
-				state.selected = index
+	for _, t := range s.tasks {
+		s.collapsed[t.Phase] = !all
+	}
+	s.rebuildVisible()
+}
+func (s *Model) SetViewportHeights(top, bottom int) {
+	s.viewports[TaskPane].Height = max(1, top)
+	s.viewports[DetailPane].Height = max(1, top)
+	s.viewports[ActivityPane].Height = max(1, bottom)
+	s.viewports[InterventionPane].Height = max(1, bottom)
+	s.ensureVisible()
+	for p := DetailPane; p <= InterventionPane; p++ {
+		s.viewports[p].Offset = clamp(s.viewports[p].Offset, 0, max(0, s.paneLength(p)-s.viewports[p].Height))
+	}
+}
+
+func (s *Model) Visible() []Task {
+	out := make([]Task, 0, len(s.visible))
+	for _, i := range s.visible {
+		out = append(out, s.tasks[i])
+	}
+	return out
+}
+func (s *Model) TreeRows() []TreeRow {
+	rows := make([]TreeRow, 0, len(s.visible)+8)
+	seen := map[string]bool{}
+	for _, t := range s.tasks {
+		if !s.matches(t) {
+			continue
+		}
+		if !seen[t.Phase] {
+			seen[t.Phase] = true
+			rows = append(rows, TreeRow{Kind: PhaseRow, Phase: t.Phase, Expanded: s.filter != "" || !s.collapsed[t.Phase]})
+		}
+		if s.filter != "" || !s.collapsed[t.Phase] {
+			rows = append(rows, TreeRow{Kind: TaskRow, Phase: t.Phase, Task: t})
+		}
+	}
+	return rows
+}
+func (s *Model) VisibleTreeRows() []TreeRow {
+	rows := s.TreeRows()
+	v := s.viewports[TaskPane]
+	a := clamp(v.Offset, 0, len(rows))
+	b := min(len(rows), a+max(1, v.Height))
+	return append([]TreeRow(nil), rows[a:b]...)
+}
+func (s *Model) DetailLines() []string {
+	lines := s.detailLines()
+	v := s.viewports[DetailPane]
+	a := clamp(v.Offset, 0, len(lines))
+	b := min(len(lines), a+max(1, v.Height))
+	return append([]string(nil), lines[a:b]...)
+}
+
+func (s *Model) rebuildVisible() {
+	s.visible = s.visible[:0]
+	for i, t := range s.tasks {
+		if s.matches(t) && (s.filter != "" || !s.collapsed[t.Phase]) {
+			s.visible = append(s.visible, i)
+		}
+	}
+	s.selected = 0
+	if s.selectedID != "" {
+		for n, i := range s.visible {
+			if s.tasks[i].ID == s.selectedID {
+				s.selected = n
 				break
 			}
 		}
 	}
-	if len(state.visible) != 0 {
-		state.selectedID = state.Selected().ID
+	if len(s.visible) > 0 {
+		s.selectedID = s.Selected().ID
 	}
+	s.ensureVisible()
+}
+func (s *Model) matches(t Task) bool {
+	return s.filter == "" || strings.Contains(strings.ToLower(t.ID+" "+t.Phase+" "+t.Title+" "+t.Status), s.filter)
+}
+func (s *Model) ensureVisible() {
+	rows := s.TreeRows()
+	id := s.Selected().ID
+	row := 0
+	for i, r := range rows {
+		if r.Kind == TaskRow && r.Task.ID == id {
+			row = i
+			break
+		}
+	}
+	v := &s.viewports[TaskPane]
+	if row < v.Offset {
+		v.Offset = row
+	}
+	if v.Height > 0 && row >= v.Offset+v.Height {
+		v.Offset = row - v.Height + 1
+	}
+	v.Offset = clamp(v.Offset, 0, max(0, len(rows)-max(1, v.Height)))
+}
+func (s *Model) scroll(p Pane, d int) {
+	v := &s.viewports[p]
+	v.Offset = clamp(v.Offset+d, 0, max(0, s.paneLength(p)-max(1, v.Height)))
+}
+func (s *Model) paneLength(p Pane) int {
+	switch p {
+	case DetailPane:
+		return len(s.detailLines())
+	case ActivityPane:
+		return len(s.activity)
+	case InterventionPane:
+		return len(s.interventions)
+	default:
+		return len(s.TreeRows())
+	}
+}
+func (s *Model) detailLines() []string {
+	t := s.Selected()
+	if t.ID == "" {
+		return nil
+	}
+	out := []string{t.ID + " — " + t.Title, "Status: " + strings.ToUpper(t.Status), "Phase: " + t.Phase}
+	if t.Agent != "" {
+		out = append(out, "Agent: "+t.Agent)
+	}
+	if t.SessionID != "" {
+		out = append(out, "Session: "+t.SessionID)
+	}
+	if t.CurrentAction != "" {
+		out = append(out, "Current action: "+t.CurrentAction)
+	}
+	if len(t.UnsatisfiedDependencies) > 0 {
+		out = append(out, "Dependencies:")
+		for _, d := range t.UnsatisfiedDependencies {
+			out = append(out, "  ○ "+d+" (unsatisfied)")
+		}
+	}
+	return out
+}
+func clamp(v, lo, hi int) int {
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
 }

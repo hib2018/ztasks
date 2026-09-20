@@ -9,6 +9,16 @@ const (
 	MoveDown
 	Resize
 	Filter
+	PageUp
+	PageDown
+	First
+	Last
+	FocusNext
+	FocusPrevious
+	Collapse
+	Expand
+	TogglePhase
+	ToggleAll
 )
 
 type Message struct {
@@ -27,5 +37,27 @@ func Apply(state *model.Model, message Message) {
 		state.Resize(message.Width, message.Height)
 	case Filter:
 		state.Filter(message.Filter)
+	case PageUp:
+		state.Page(-1)
+	case PageDown:
+		state.Page(1)
+	case First:
+		state.Boundary(false)
+	case Last:
+		state.Boundary(true)
+	case FocusNext:
+		state.Focus(1)
+	case FocusPrevious:
+		state.Focus(-1)
+	case Collapse:
+		expand := false
+		state.ToggleSelectedPhase(&expand)
+	case Expand:
+		expand := true
+		state.ToggleSelectedPhase(&expand)
+	case TogglePhase:
+		state.ToggleSelectedPhase(nil)
+	case ToggleAll:
+		state.ToggleAllPhases()
 	}
 }

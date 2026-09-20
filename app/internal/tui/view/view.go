@@ -4,88 +4,161 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/hib2018/ztasks/app/internal/tui/model"
 )
 
 func Render(state *model.Model) string {
-	var output strings.Builder
+	var notices []string
 	project := state.ProjectStatus()
 	if project.DefinitionMissing {
-		output.WriteString("DEFINITION MISSING — run ztasks sync after restoring tasks.md\n")
+		notices = append(notices, "DEFINITION MISSING — run ztasks sync after restoring tasks.md")
 	}
-	if len(project.SyncAdded)+len(project.SyncChanged)+len(project.SyncMissing)+len(project.SyncReappeared) != 0 {
-		fmt.Fprintf(&output, "Sync: +%s ~%s -%s ↻%s\n", strings.Join(project.SyncAdded, ","), strings.Join(project.SyncChanged, ","), strings.Join(project.SyncMissing, ","), strings.Join(project.SyncReappeared, ","))
+	if len(project.SyncAdded)+len(project.SyncChanged)+len(project.SyncMissing)+len(project.SyncReappeared) > 0 {
+		notices = append(notices, fmt.Sprintf("Sync: +%s ~%s -%s ↻%s", strings.Join(project.SyncAdded, ","), strings.Join(project.SyncChanged, ","), strings.Join(project.SyncMissing, ","), strings.Join(project.SyncReappeared, ",")))
 	}
 	for _, warning := range project.Warnings {
-		output.WriteString("Warning: " + warning + "\n")
+		notices = append(notices, "Warning: "+warning)
 	}
+
 	width := state.Width()
 	if width <= 0 {
 		width = 100
 	}
-	leftWidth := max(28, width*2/5)
-	fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, "Tasks", "Task Detail")
-	fmt.Fprintf(&output, "%s─┼─%s\n", strings.Repeat("─", leftWidth), strings.Repeat("─", max(1, width-leftWidth-3)))
-	selected := state.Selected()
-	visible := state.Visible()
-	for index, task := range visible {
-		marker := " "
-		if task.ID == selected.ID {
-			marker = "→"
-		}
-		left := fmt.Sprintf("%s %-7s %-9s %s", marker, task.ID, strings.ToUpper(task.Status), task.Title)
-		right := ""
-		if index == 0 && selected.ID != "" {
-			right = fmt.Sprintf("%s — %s", selected.ID, selected.Title)
-		} else if index == 1 && selected.ID != "" {
-			right = "Status: " + strings.ToUpper(selected.Status)
-		} else if index == 2 && selected.CurrentAction != "" {
-			right = "Current action: " + selected.CurrentAction
-		}
-		fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, fit(left, leftWidth), right)
+	height := state.Height()
+	if height <= 0 {
+		height = 30
 	}
-	output.WriteString(strings.Repeat("─", leftWidth))
-	output.WriteString("─┼─")
-	output.WriteString(strings.Repeat("─", max(1, width-leftWidth-3)))
-	output.WriteByte('\n')
-	fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, "Activity", "Human Intervention")
-	activity := state.Activity()
-	interventions := state.Interventions()
-	rows := max(len(activity), len(interventions))
-	for index := 0; index < rows; index++ {
-		left, right := "", ""
-		if index < len(activity) {
-			left = activity[index].Type + " " + activity[index].TaskID
-			if activity[index].Stale {
-				left = "[STALE] " + left
-			}
-			if activity[index].Detail != "" {
-				left += " — " + activity[index].Detail
-			}
-		}
-		if index < len(interventions) {
-			item := interventions[index]
-			stateLabel := strings.ToUpper(item.State)
-			if item.State == "pending" {
-				stateLabel = "REQUESTED"
-			}
-			right = strings.ToUpper(item.Action) + " " + stateLabel
-			if item.Detail != "" {
-				right += " — " + item.Detail
-			}
-		}
-		fmt.Fprintf(&output, "%-*s │ %s\n", leftWidth, fit(left, leftWidth), right)
+	usable := max(10, height-len(notices)-2)
+	topTotal := max(5, usable*2/3)
+	bottomTotal := max(4, usable-topTotal)
+	state.SetViewportHeights(topTotal-2, bottomTotal-2)
+
+	taskLines := treeLines(state)
+	detailLines := state.DetailLines()
+	activityLines := activityLines(state)
+	interventionLines := interventionLines(state)
+
+	var body string
+	if width < 64 {
+		body = strings.Join(box("Tasks", taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n" +
+			strings.Join(box("Task Detail", detailLines, width, topTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
+			strings.Join(box("Activity", activityLines, width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n") + "\n" +
+			strings.Join(box("Human Intervention", interventionLines, width, bottomTotal, state.FocusedPane() == model.InterventionPane), "\n")
+	} else {
+		left := max(28, width*2/5)
+		right := max(28, width-left-1)
+		body = strings.Join(joinBoxes(box("Tasks", taskLines, left, topTotal, state.FocusedPane() == model.TaskPane), box("Task Detail", detailLines, right, topTotal, state.FocusedPane() == model.DetailPane)), "\n") + "\n" +
+			strings.Join(joinBoxes(box("Activity", activityLines, left, bottomTotal, state.FocusedPane() == model.ActivityPane), box("Human Intervention", interventionLines, right, bottomTotal, state.FocusedPane() == model.InterventionPane)), "\n")
 	}
-	return output.String()
+	if len(notices) == 0 {
+		return body
+	}
+	return strings.Join(notices, "\n") + "\n" + body
 }
 
+func treeLines(state *model.Model) []string {
+	selected := state.Selected()
+	rows := state.VisibleTreeRows()
+	lines := make([]string, 0, len(rows))
+	for _, row := range rows {
+		if row.Kind == model.PhaseRow {
+			icon := "▶"
+			if row.Expanded {
+				icon = "▼"
+			}
+			lines = append(lines, icon+" "+row.Phase)
+			continue
+		}
+		marker := " "
+		if row.Task.ID == selected.ID {
+			marker = "→"
+		}
+		lines = append(lines, fmt.Sprintf("  %s %s %-9s %s", marker, row.Task.ID, strings.ToUpper(row.Task.Status), row.Task.Title))
+	}
+	return lines
+}
+func activityLines(state *model.Model) []string {
+	all := state.Activity()
+	v := state.Viewport(model.ActivityPane)
+	a := clamp(v.Offset, 0, len(all))
+	b := min(len(all), a+max(1, v.Height))
+	out := make([]string, 0, b-a)
+	for _, item := range all[a:b] {
+		line := item.Type + " " + item.TaskID
+		if item.Stale {
+			line = "[STALE] " + line
+		}
+		if item.Detail != "" {
+			line += " — " + item.Detail
+		}
+		out = append(out, line)
+	}
+	return out
+}
+func interventionLines(state *model.Model) []string {
+	all := state.Interventions()
+	v := state.Viewport(model.InterventionPane)
+	a := clamp(v.Offset, 0, len(all))
+	b := min(len(all), a+max(1, v.Height))
+	out := make([]string, 0, b-a)
+	for _, item := range all[a:b] {
+		label := strings.ToUpper(item.State)
+		if item.State == "pending" {
+			label = "REQUESTED"
+		}
+		line := strings.ToUpper(item.Action) + " " + label
+		if item.Detail != "" {
+			line += " — " + item.Detail
+		}
+		out = append(out, line)
+	}
+	return out
+}
+
+func box(title string, content []string, width, height int, focused bool) []string {
+	width = max(4, width)
+	height = max(3, height)
+	inner := width - 2
+	label := " " + title + " "
+	if focused {
+		label = "[ " + title + " ]"
+	}
+	label = fit(label, max(0, inner))
+	top := "┌" + label + strings.Repeat("─", max(0, inner-displayWidth(label))) + "┐"
+	lines := []string{top}
+	for i := 0; i < height-2; i++ {
+		text := ""
+		if i < len(content) {
+			text = content[i]
+		}
+		text = fit(text, inner)
+		lines = append(lines, "│"+text+strings.Repeat(" ", max(0, inner-displayWidth(text)))+"│")
+	}
+	lines = append(lines, "└"+strings.Repeat("─", inner)+"┘")
+	return lines
+}
+func joinBoxes(left, right []string) []string {
+	n := min(len(left), len(right))
+	out := make([]string, n)
+	for i := 0; i < n; i++ {
+		out[i] = left[i] + " " + right[i]
+	}
+	return out
+}
 func fit(value string, limit int) string {
 	if limit <= 0 {
 		return ""
 	}
-	runes := []rune(value)
-	if len(runes) <= limit {
-		return value
+	return ansi.Truncate(value, limit, "")
+}
+func displayWidth(value string) int { return ansi.StringWidth(value) }
+func clamp(v, lo, hi int) int {
+	if v < lo {
+		return lo
 	}
-	return string(runes[:limit])
+	if v > hi {
+		return hi
+	}
+	return v
 }

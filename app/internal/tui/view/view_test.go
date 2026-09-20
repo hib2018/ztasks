@@ -42,6 +42,15 @@ func TestRenderFramesEveryPaneAndMarksFocus(t *testing.T) {
 	}
 }
 
+func TestTreeMarksSelectedPhaseRow(t *testing.T) {
+	state := model.New([]model.Task{{ID: "T001", Phase: "Setup", Title: "Work", Status: "ready"}})
+	state.Move(-1)
+	state.Resize(80, 20)
+	if output := Render(state); !strings.Contains(output, "→ ▼ Setup") {
+		t.Fatalf("selected phase marker missing: %s", output)
+	}
+}
+
 func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
 	state := model.New([]model.Task{{ID: "T001", Phase: "日本語フェーズ", Title: "日本語の長い作業名", Status: "ready"}})
 	state.Resize(80, 24)

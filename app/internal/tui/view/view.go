@@ -58,7 +58,7 @@ func Render(state *model.Model) string {
 }
 
 func treeLines(state *model.Model) []string {
-	selected := state.Selected()
+	selected, hasSelection := state.SelectedTreeRow()
 	rows := state.VisibleTreeRows()
 	lines := make([]string, 0, len(rows))
 	for _, row := range rows {
@@ -67,11 +67,15 @@ func treeLines(state *model.Model) []string {
 			if row.Expanded {
 				icon = "▼"
 			}
-			lines = append(lines, icon+" "+row.Phase)
+			marker := " "
+			if hasSelection && selected.Kind == model.PhaseRow && selected.Phase == row.Phase {
+				marker = "→"
+			}
+			lines = append(lines, marker+" "+icon+" "+row.Phase)
 			continue
 		}
 		marker := " "
-		if row.Task.ID == selected.ID {
+		if hasSelection && selected.Kind == model.TaskRow && row.Task.ID == selected.Task.ID {
 			marker = "→"
 		}
 		lines = append(lines, fmt.Sprintf("  %s %s %-9s %s", marker, row.Task.ID, strings.ToUpper(row.Task.Status), row.Task.Title))

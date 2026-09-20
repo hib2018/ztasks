@@ -66,3 +66,27 @@ func TestPhaseTreeCollapsesAndCanReopen(t *testing.T) {
 		t.Fatal("collapsed phase could not be reopened")
 	}
 }
+
+func TestPhaseRowsAreSelectableAndControlTheirOwnFold(t *testing.T) {
+	state := New([]Task{{ID: "T001", Phase: "Setup"}, {ID: "T002", Phase: "Setup"}, {ID: "T003", Phase: "Runtime"}})
+	state.Move(-1)
+	selected, ok := state.SelectedTreeRow()
+	if !ok || selected.Kind != PhaseRow || selected.Phase != "Setup" {
+		t.Fatalf("selected row = %#v, %v", selected, ok)
+	}
+
+	state.ToggleSelectedPhase(nil)
+	selected, ok = state.SelectedTreeRow()
+	if !ok || selected.Kind != PhaseRow || selected.Phase != "Setup" || selected.Expanded {
+		t.Fatalf("collapsed phase selection = %#v, %v", selected, ok)
+	}
+	if rows := state.TreeRows(); len(rows) != 3 {
+		t.Fatalf("collapsed rows = %d, want 3", len(rows))
+	}
+
+	state.ToggleSelectedPhase(nil)
+	selected, _ = state.SelectedTreeRow()
+	if !selected.Expanded || len(state.TreeRows()) != 5 {
+		t.Fatalf("reopened phase = %#v", selected)
+	}
+}

@@ -49,7 +49,7 @@ type Model struct {
 	interventions      []Intervention
 	project            ProjectStatus
 	collapsed          map[string]bool
-	lastCollapsed      string
+	treeCursor         int
 	focused            Pane
 	viewports          [4]Viewport
 	width, height      int
@@ -64,10 +64,28 @@ func (s *Model) Width() int      { return s.width }
 func (s *Model) Height() int     { return s.height }
 func (s *Model) Resize(w, h int) { s.width = max(0, w); s.height = max(0, h) }
 func (s *Model) Selected() Task {
+	if row, ok := s.SelectedTreeRow(); ok {
+		if row.Kind == TaskRow {
+			return row.Task
+		}
+		for _, task := range s.tasks {
+			if task.Phase == row.Phase && s.matches(task) {
+				return task
+			}
+		}
+	}
 	if len(s.visible) == 0 {
 		return Task{}
 	}
 	return s.tasks[s.visible[s.selected]]
+}
+func (s *Model) SelectedTreeRow() (TreeRow, bool) {
+	rows := s.TreeRows()
+	if len(rows) == 0 {
+		return TreeRow{}, false
+	}
+	s.treeCursor = clamp(s.treeCursor, 0, len(rows)-1)
+	return rows[s.treeCursor], true
 }
 func (s *Model) Detail() Task             { return s.Selected() }
 func (s *Model) FilterValue() string      { return s.filter }
@@ -89,12 +107,11 @@ func (s *Model) Move(delta int) {
 		s.scroll(s.focused, delta)
 		return
 	}
-	if len(s.visible) == 0 {
+	rows := s.TreeRows()
+	if len(rows) == 0 {
 		return
 	}
-	s.selected = clamp(s.selected+delta, 0, len(s.visible)-1)
-	s.selectedID = s.Selected().ID
-	s.ensureVisible()
+	s.selectTreeRow(clamp(s.treeCursor+delta, 0, len(rows)-1))
 }
 func (s *Model) Page(delta int) {
 	h := max(1, s.viewports[s.focused].Height)
@@ -106,16 +123,15 @@ func (s *Model) Page(delta int) {
 }
 func (s *Model) Boundary(last bool) {
 	if s.focused == TaskPane {
-		if len(s.visible) == 0 {
+		rows := s.TreeRows()
+		if len(rows) == 0 {
 			return
 		}
 		if last {
-			s.selected = len(s.visible) - 1
+			s.selectTreeRow(len(rows) - 1)
 		} else {
-			s.selected = 0
+			s.selectTreeRow(0)
 		}
-		s.selectedID = s.Selected().ID
-		s.ensureVisible()
 		return
 	}
 	if last {
@@ -133,10 +149,11 @@ func (s *Model) Filter(q string) {
 	s.rebuildVisible()
 }
 func (s *Model) ToggleSelectedPhase(expand *bool) {
-	p := s.Selected().Phase
-	if expand != nil && *expand && s.lastCollapsed != "" && s.collapsed[s.lastCollapsed] {
-		p = s.lastCollapsed
+	row, ok := s.SelectedTreeRow()
+	if !ok {
+		return
 	}
+	p := row.Phase
 	if p == "" {
 		return
 	}
@@ -145,12 +162,14 @@ func (s *Model) ToggleSelectedPhase(expand *bool) {
 	} else {
 		s.collapsed[p] = !*expand
 	}
-	if s.collapsed[p] {
-		s.lastCollapsed = p
-	} else if s.lastCollapsed == p {
-		s.lastCollapsed = ""
-	}
 	s.rebuildVisible()
+	for index, candidate := range s.TreeRows() {
+		if candidate.Kind == PhaseRow && candidate.Phase == p {
+			s.treeCursor = index
+			break
+		}
+	}
+	s.ensureCursorVisible()
 }
 func (s *Model) ToggleAllPhases() {
 	all := true
@@ -170,7 +189,7 @@ func (s *Model) SetViewportHeights(top, bottom int) {
 	s.viewports[DetailPane].Height = max(1, top)
 	s.viewports[ActivityPane].Height = max(1, bottom)
 	s.viewports[InterventionPane].Height = max(1, bottom)
-	s.ensureVisible()
+	s.ensureCursorVisible()
 	for p := DetailPane; p <= InterventionPane; p++ {
 		s.viewports[p].Offset = clamp(s.viewports[p].Offset, 0, max(0, s.paneLength(p)-s.viewports[p].Height))
 	}
@@ -234,29 +253,63 @@ func (s *Model) rebuildVisible() {
 	if len(s.visible) > 0 {
 		s.selectedID = s.Selected().ID
 	}
-	s.ensureVisible()
+	rows := s.TreeRows()
+	for index, row := range rows {
+		if row.Kind == TaskRow && row.Task.ID == s.selectedID {
+			s.treeCursor = index
+			break
+		}
+	}
+	s.ensureCursorVisible()
 }
 func (s *Model) matches(t Task) bool {
 	return s.filter == "" || strings.Contains(strings.ToLower(t.ID+" "+t.Phase+" "+t.Title+" "+t.Status), s.filter)
 }
-func (s *Model) ensureVisible() {
+func (s *Model) ensureCursorVisible() {
 	rows := s.TreeRows()
-	id := s.Selected().ID
-	row := 0
-	for i, r := range rows {
-		if r.Kind == TaskRow && r.Task.ID == id {
-			row = i
-			break
-		}
+	if len(rows) == 0 {
+		s.treeCursor = 0
+		s.viewports[TaskPane].Offset = 0
+		return
 	}
+	s.treeCursor = clamp(s.treeCursor, 0, len(rows)-1)
 	v := &s.viewports[TaskPane]
-	if row < v.Offset {
-		v.Offset = row
+	if s.treeCursor < v.Offset {
+		v.Offset = s.treeCursor
 	}
-	if v.Height > 0 && row >= v.Offset+v.Height {
-		v.Offset = row - v.Height + 1
+	if v.Height > 0 && s.treeCursor >= v.Offset+v.Height {
+		v.Offset = s.treeCursor - v.Height + 1
 	}
 	v.Offset = clamp(v.Offset, 0, max(0, len(rows)-max(1, v.Height)))
+}
+func (s *Model) selectTreeRow(index int) {
+	rows := s.TreeRows()
+	if len(rows) == 0 {
+		return
+	}
+	s.treeCursor = clamp(index, 0, len(rows)-1)
+	row := rows[s.treeCursor]
+	selectedID := ""
+	if row.Kind == TaskRow {
+		selectedID = row.Task.ID
+	} else {
+		for _, task := range s.tasks {
+			if task.Phase == row.Phase && s.matches(task) {
+				selectedID = task.ID
+				break
+			}
+		}
+	}
+	if selectedID != "" {
+		s.selectedID = selectedID
+		for visibleIndex, taskIndex := range s.visible {
+			if s.tasks[taskIndex].ID == selectedID {
+				s.selected = visibleIndex
+				break
+			}
+		}
+	}
+	s.ensureCursorVisible()
 }
 func (s *Model) scroll(p Pane, d int) {
 	v := &s.viewports[p]

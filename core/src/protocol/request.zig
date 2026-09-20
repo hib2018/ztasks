@@ -74,6 +74,7 @@ fn allowedPayloadFields(op: []const u8) ?[]const []const u8 {
     if (std.mem.eql(u8, op, "intervention.respond")) return &.{ "request_event_id", "outcome", "message" };
     if (std.mem.eql(u8, op, "task.list")) return &.{ "status", "phase", "agent" };
     if (std.mem.eql(u8, op, "task.show") or std.mem.eql(u8, op, "event.list")) return &.{ "limit", "after_seq" };
+    if (std.mem.eql(u8, op, "project.bootstrap")) return &.{ "locator", "mode" };
     if (std.mem.eql(u8, op, "source.validate") or std.mem.eql(u8, op, "project.init") or std.mem.eql(u8, op, "source.sync")) return &.{"locator"};
     return null;
 }

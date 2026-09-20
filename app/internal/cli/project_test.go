@@ -11,11 +11,15 @@ func TestProjectCommandsBuildExactProtocolOperations(t *testing.T) {
 	if initRequest.Operation != "project.init" || !strings.Contains(string(initRequest.Payload), "specs/001/tasks.md") {
 		t.Fatalf("unexpected init request: %#v", initRequest)
 	}
-	for command, operation := range map[string]string{"sync": "source.sync", "doctor": "health.check"} {
+	for command, operation := range map[string]string{"bootstrap": "project.bootstrap", "sync": "source.sync", "doctor": "health.check"} {
 		request := BuildProjectRequest("req-"+command, command, "")
 		if request.Operation != operation {
 			t.Fatalf("%s mapped to %s", command, request.Operation)
 		}
+	}
+	bootstrap := BuildProjectRequest("req-bootstrap", "bootstrap", "")
+	if !strings.Contains(string(bootstrap.Payload), `"mode":"speckit_checkboxes"`) {
+		t.Fatalf("bootstrap mode missing: %s", bootstrap.Payload)
 	}
 }
 

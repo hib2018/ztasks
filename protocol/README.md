@@ -38,3 +38,19 @@ discipline, and versioning.
 The normative field limits, extraction grammar, mappings, and redaction classes are maintained in
 `specs/001-task-execution-control/contracts/`. Shared JSONL fixtures under `protocol/fixtures/`
 exercise the language-neutral surface.
+
+## Existing-state bootstrap
+
+`project.bootstrap` imports an existing Spec Kit checkbox state without changing
+the source Markdown. The request payload is closed and requires
+`{"mode":"speckit_checkboxes"}`; an optional `locator` selects `tasks.md`.
+
+An accepted request appends exactly one `project.runtime_bootstrapped` Event.
+Its payload contains the digest-bound Definition references and a `completed`
+array of imported Task IDs. The reducer treats those IDs as `completed`, while
+later task lifecycle Events still take precedence. This Event records an import;
+it must not be represented as one or more `task.completed` Events.
+
+The Core rejects the bootstrap when a checked Task depends on an unchecked,
+non-terminal Task, when an imported Task already has conflicting Runtime state,
+or when there is no new checked state to import.

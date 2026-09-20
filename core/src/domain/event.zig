@@ -15,6 +15,7 @@ pub const Actor = struct {
 
 pub const EventType = enum {
     project_initialized,
+    project_runtime_bootstrapped,
     source_synced,
     task_started,
     task_progress,
@@ -37,6 +38,7 @@ pub const EventType = enum {
     pub fn wireName(self: EventType) []const u8 {
         return switch (self) {
             .project_initialized => "project.initialized",
+            .project_runtime_bootstrapped => "project.runtime_bootstrapped",
             .source_synced => "source.synced",
             .task_started => "task.started",
             .task_progress => "task.progress",
@@ -63,6 +65,7 @@ pub const InterventionOutcome = enum { acknowledged, rejected, unsupported, comp
 
 pub const EventPayload = union(enum) {
     project_initialized: struct { source_digest: []const u8, definition_ref: []const u8, definition_digest: []const u8, dependency_digest: []const u8 },
+    project_runtime_bootstrapped: struct { source_digest: []const u8, definition_ref: []const u8, definition_digest: []const u8, dependency_digest: []const u8, completed: []const []const u8 },
     source_synced: struct {
         previous_digest: []const u8,
         source_digest: []const u8,
@@ -143,6 +146,7 @@ pub fn validateCanonicalSize(size: usize) !void {
 fn validatePayload(event_type: EventType, payload: EventPayload, allocator: std.mem.Allocator) !void {
     const valid_pair = switch (event_type) {
         .project_initialized => payload == .project_initialized,
+        .project_runtime_bootstrapped => payload == .project_runtime_bootstrapped,
         .source_synced => payload == .source_synced,
         .task_started => payload == .started,
         .task_progress => payload == .progress,
@@ -164,6 +168,13 @@ fn validatePayload(event_type: EventType, payload: EventPayload, allocator: std.
             try content_policy.validateSourceLocator(value.definition_ref);
             try content_policy.validateIdentifier(value.definition_digest);
             try content_policy.validateIdentifier(value.dependency_digest);
+        },
+        .project_runtime_bootstrapped => |value| {
+            try content_policy.validateIdentifier(value.source_digest);
+            try content_policy.validateSourceLocator(value.definition_ref);
+            try content_policy.validateIdentifier(value.definition_digest);
+            try content_policy.validateIdentifier(value.dependency_digest);
+            for (value.completed) |id| if (!task_definition.isTaskId(id)) return error.InvalidTaskId;
         },
         .source_synced => |value| {
             try content_policy.validateIdentifier(value.previous_digest);

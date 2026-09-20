@@ -19,6 +19,7 @@ pub fn classify(operation: []const u8) !OperationMapping {
     }
     const mutations = [_]struct { operation: []const u8, event_type: []const u8 }{
         .{ .operation = "project.init", .event_type = "project.initialized" },
+        .{ .operation = "project.bootstrap", .event_type = "project.runtime_bootstrapped" },
         .{ .operation = "source.sync", .event_type = "source.synced" },
         .{ .operation = "task.start", .event_type = "task.started" },
         .{ .operation = "task.progress", .event_type = "task.progress" },

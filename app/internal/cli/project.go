@@ -18,6 +18,7 @@ const Help = `ztasks - Agent Task Execution human control surface
 Usage:
   ztasks [tui]
   ztasks init [tasks.md]
+  ztasks bootstrap --from-checkboxes [tasks.md]
   ztasks sync [tasks.md]
   ztasks status [--json]
   ztasks task show <id> [--json]
@@ -40,8 +41,11 @@ func VersionReport() string {
 }
 
 func BuildProjectRequest(requestID, command, locator string) protocol.Request {
-	operation := map[string]string{"init": "project.init", "sync": "source.sync", "inspect": "project.inspect", "doctor": "health.check"}[command]
+	operation := map[string]string{"init": "project.init", "bootstrap": "project.bootstrap", "sync": "source.sync", "inspect": "project.inspect", "doctor": "health.check"}[command]
 	payload := map[string]string{}
+	if command == "bootstrap" {
+		payload["mode"] = "speckit_checkboxes"
+	}
 	if locator != "" {
 		payload["locator"] = locator
 	}

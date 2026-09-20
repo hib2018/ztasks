@@ -66,6 +66,20 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 	requestID := newRequestID()
 	var output string
 	switch {
+	case len(filtered) >= 2 && filtered[0] == "bootstrap":
+		if (len(filtered) != 2 && len(filtered) != 3) || filtered[1] != "--from-checkboxes" {
+			err = fmt.Errorf("usage: ztasks bootstrap --from-checkboxes [tasks.md]")
+			break
+		}
+		locator := ""
+		if len(filtered) == 3 {
+			locator = filtered[2]
+		}
+		result, bootstrapErr := Execute(client, BuildProjectRequest(requestID, "bootstrap", locator))
+		if bootstrapErr == nil {
+			output, bootstrapErr = RenderProjectResult("bootstrap", result, machineReadable)
+		}
+		err = bootstrapErr
 	case len(filtered) >= 1 && (filtered[0] == "init" || filtered[0] == "sync" || filtered[0] == "doctor"):
 		if len(filtered) > 2 || (filtered[0] == "doctor" && len(filtered) != 1) {
 			err = fmt.Errorf("usage: ztasks %s [tasks.md]", filtered[0])

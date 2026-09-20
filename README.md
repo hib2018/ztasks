@@ -142,12 +142,25 @@ project/
 └── src/
 ```
 
+新規にRuntimeの記録を始める場合:
+
 ```sh
 cd project
 ztasks init
 ztasks status
 ztasks task show T001
 ```
+
+すでに作業済みのProjectで、`tasks.md` のチェック状態からRuntimeの記録を始める場合:
+
+```sh
+cd project
+ztasks bootstrap --from-checkboxes
+ztasks status
+ztasks task show T001
+```
+
+`bootstrap` は既存状態の取り込みとProjectの初期化を兼ねるため、先に `ztasks init` を実行する必要はありません。新規運用では `init`、既存状態からの移行では `bootstrap` のどちらかを選びます。
 
 引数なしの `ztasks` は、現在のshell画面を保ったままalternate screen bufferへ切り替え、
 端末前面を占有する全画面TUIを起動します。`q`または`Ctrl+C`で終了すると元のshell画面へ戻ります。
@@ -162,7 +175,9 @@ Spec Kit が `tasks.md` を更新したら、再同期します。
 ztasks sync
 ```
 
-`init` と `sync` は `tasks.md` を変更しません。正規化した Definition と dependency artifact を `.ztasks/sources/` に保存し、受理した同期ごとに監査可能な Event を1件追加します。変更がない同期も空の change set を持つ Event として記録されます。
+`init`、`bootstrap`、`sync` は `tasks.md` を変更しません。正規化した Definition と dependency artifact を `.ztasks/sources/` に保存し、受理した操作ごとに監査可能な Event を1件追加します。初期化後にDefinitionが更新された場合は、どちらの開始方法でも `ztasks sync` を使用します。変更がない同期も空の change set を持つ Event として記録されます。
+
+既存プロジェクトで `tasks.md` のチェック状態を初期 Runtime に取り込む場合は、`ztasks bootstrap --from-checkboxes [tasks.md]` を明示的に実行します。チェック済み Task は `completed` として復元され、取り込み元と対象 ID は単一の `project.runtime_bootstrapped` Event に記録されます。通常の実行で完了したように見せる `task.completed` Event は生成せず、`tasks.md` 自体も変更しません。チェック済み Task の依存先が未完了なら、矛盾した状態を作らずに処理を拒否します。
 
 ## CLI
 

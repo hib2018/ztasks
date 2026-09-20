@@ -42,13 +42,13 @@ func Render(state *model.Model) string {
 	var body string
 	if width < 64 {
 		body = strings.Join(box("Tasks", taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n" +
-			strings.Join(box("Task Detail", detailLines, width, topTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
+			strings.Join(box("Task Detail", wrapDetailLines(detailLines, width-2), width, topTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
 			strings.Join(box("Activity", activityLines, width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n") + "\n" +
 			strings.Join(box("Human Intervention", interventionLines, width, bottomTotal, state.FocusedPane() == model.InterventionPane), "\n")
 	} else {
 		left := max(28, width*2/5)
 		right := max(28, width-left-1)
-		body = strings.Join(joinBoxes(box("Tasks", taskLines, left, topTotal, state.FocusedPane() == model.TaskPane), box("Task Detail", detailLines, right, topTotal, state.FocusedPane() == model.DetailPane)), "\n") + "\n" +
+		body = strings.Join(joinBoxes(box("Tasks", taskLines, left, topTotal, state.FocusedPane() == model.TaskPane), box("Task Detail", wrapDetailLines(detailLines, right-2), right, topTotal, state.FocusedPane() == model.DetailPane)), "\n") + "\n" +
 			strings.Join(joinBoxes(box("Activity", activityLines, left, bottomTotal, state.FocusedPane() == model.ActivityPane), box("Human Intervention", interventionLines, right, bottomTotal, state.FocusedPane() == model.InterventionPane)), "\n")
 	}
 	if len(notices) == 0 {
@@ -114,6 +114,31 @@ func interventionLines(state *model.Model) []string {
 		out = append(out, line)
 	}
 	return out
+}
+
+func wrapDetailLines(lines []string, width int) []string {
+	if width <= 0 {
+		return nil
+	}
+	wrapped := make([]string, 0, len(lines))
+	for _, line := range lines {
+		indent := leadingSpaces(line)
+		content := strings.TrimPrefix(line, indent)
+		contentWidth := width - displayWidth(indent)
+		if contentWidth <= 0 {
+			wrapped = append(wrapped, fit(indent, width))
+			continue
+		}
+		parts := strings.Split(ansi.Wrap(content, contentWidth, " "), "\n")
+		for _, part := range parts {
+			wrapped = append(wrapped, indent+part)
+		}
+	}
+	return wrapped
+}
+
+func leadingSpaces(value string) string {
+	return value[:len(value)-len(strings.TrimLeft(value, " "))]
 }
 
 func box(title string, content []string, width, height int, focused bool) []string {

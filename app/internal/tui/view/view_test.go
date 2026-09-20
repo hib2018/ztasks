@@ -64,3 +64,36 @@ func TestFitUsesTerminalCellWidth(t *testing.T) {
 		t.Fatalf("fit = %q, want %q", got, "日本語a")
 	}
 }
+
+func TestWrapDetailLinesPreservesItemIndent(t *testing.T) {
+	lines := wrapDetailLines([]string{
+		"Current action: 日本語を含む長い処理内容を確認しています",
+		"  ○ T001-日本語の長い依存タスク名 (unsatisfied)",
+	}, 20)
+	if len(lines) < 4 {
+		t.Fatalf("detail items were not wrapped: %#v", lines)
+	}
+	for number, line := range lines {
+		if width := ansi.StringWidth(line); width > 20 {
+			t.Fatalf("line %d width = %d, want <= 20: %q", number+1, width, line)
+		}
+	}
+	if strings.HasPrefix(lines[0], " ") || strings.HasPrefix(lines[1], " ") {
+		t.Fatalf("unindented item continuation shifted: %#v", lines[:2])
+	}
+	dependencyStart := -1
+	for index, line := range lines {
+		if strings.Contains(line, "T001") {
+			dependencyStart = index
+			break
+		}
+	}
+	if dependencyStart < 0 || dependencyStart+1 >= len(lines) {
+		t.Fatalf("wrapped dependency missing: %#v", lines)
+	}
+	for _, line := range lines[dependencyStart:] {
+		if !strings.HasPrefix(line, "  ") {
+			t.Fatalf("dependency continuation lost indent: %q", line)
+		}
+	}
+}

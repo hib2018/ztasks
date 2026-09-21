@@ -4,6 +4,26 @@ ztasks は、Spec Kit が生成した Task を Agent が実行するとき、そ
 
 一般的な Todo アプリや Planner ではありません。Task の内容を考えたり、Task Definition を独自に管理したりせず、Spec Kit の `tasks.md` を読み取り専用の Canonical Source として扱います。
 
+Z Ecosystem 全体の共通方針・横断Skill・Artifact Flow は [`hib2018/zecosystem`](https://github.com/hib2018/zecosystem) が管理します。このリポジトリは ztasks 固有の Task Runtime、Event Protocol、source adapter、CLI/TUI を所有します。
+
+## 前提条件
+
+- ztasks は Human-controlled Artifact Pipeline の実行監視境界です。意味解釈やTask生成は行いません。
+- `tasks.md` は Project-owned Definition Artifact であり、ztasks は checkbox を含めて書き換えません。
+- Runtime State は `.ztasks/` の Event history から復元します。Runtime は `tasks.md` を再定義しません。
+- Agent への pause / retry / stop などの要求と、Agent またはAdapterによる実際の反映結果を区別します。
+- Core と Protocol は特定Agentやharnessに依存しません。Pi/Codex等との差分はAdapter側へ隔離します。
+
+## Z Ecosystem における境界
+
+| 領域 | 所有者 |
+|---|---|
+| Task Runtime、Event、JSON Lines Protocol、dependency extraction | このリポジトリ |
+| Spec Kit `tasks.md` source adapter | このリポジトリ |
+| Artifact Flow 全体、横断Agent原則、将来のSpec Kit profile方針 | `zecosystem` |
+| Project-local `spec.md` / `plan.md` / `tasks.md` | 各Project |
+| Pi/Codex等のharness設定 | `dotfiles` または各harness設定 |
+
 ```text
 Human Request → zintent → Approved Intent → Spec Kit
                                               ├── spec.md

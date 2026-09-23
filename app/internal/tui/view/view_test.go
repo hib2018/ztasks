@@ -79,6 +79,19 @@ func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
 	}
 }
 
+func TestDuplicateTaskIDsShowOneSelectionArrow(t *testing.T) {
+	state := model.New([]model.Task{
+		{ID: "T001", Phase: "specs/001/tasks.md", Title: "First", Status: "ready"},
+		{ID: "T001", Phase: "specs/002/tasks.md", Title: "Second", Status: "pending"},
+	})
+	state.Resize(100, 24)
+	state.Boundary(true)
+	output := Render(state)
+	if strings.Count(output, "→") != 1 || !strings.Contains(output, selectedText("[PENDING]")) {
+		t.Fatalf("duplicate IDs produced ambiguous selection: %s", output)
+	}
+}
+
 func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
 	state := model.New([]model.Task{{ID: "T001", Phase: "日本語フェーズ", Title: "日本語の長い作業名", Status: "ready"}})
 	state.Resize(80, 24)

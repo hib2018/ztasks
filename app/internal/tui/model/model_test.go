@@ -50,6 +50,21 @@ func TestTaskViewportFollowsSelectionAndPages(t *testing.T) {
 	}
 }
 
+func TestDuplicateTaskIDsKeepSourceSelectionAndScrollPosition(t *testing.T) {
+	state := New([]Task{
+		{ID: "T001", Phase: "specs/001/tasks.md", Title: "First"},
+		{ID: "T001", Phase: "specs/002/tasks.md", Title: "Second"},
+	})
+	state.SetViewportHeights(2, 2)
+	state.Boundary(true)
+	if selected := state.Selected(); selected.Title != "Second" {
+		t.Fatalf("selected duplicate task = %#v", selected)
+	}
+	if offset := state.Viewport(TaskPane).Offset; offset != 2 {
+		t.Fatalf("task viewport offset = %d, want 2", offset)
+	}
+}
+
 func TestPhaseTreeCollapsesAndCanReopen(t *testing.T) {
 	state := New([]Task{{ID: "T001", Phase: "Setup"}, {ID: "T002", Phase: "Setup"}, {ID: "T003", Phase: "Runtime"}})
 	if len(state.TreeRows()) != 5 {

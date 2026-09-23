@@ -34,26 +34,26 @@ func Render(state *model.Model) string {
 	bottomTotal := max(4, usable-topTotal)
 	state.SetViewportHeights(topTotal-2, bottomTotal-2)
 
-	taskWidth := width - 2
-	if width >= 64 {
-		taskWidth = max(8, width*2/5-2)
-	}
-	taskLines := treeLines(state, taskWidth)
+	taskLines := treeLines(state, width-2)
 	detailLines := state.DetailLines()
 	activityLines := activityLines(state)
 	interventionLines := interventionLines(state)
 
 	var body string
+	body = strings.Join(box("Tasks", taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n"
 	if width < 64 {
-		body = strings.Join(box("Tasks", taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n" +
-			strings.Join(box("Task Detail", wrapDetailLines(detailLines, width-2), width, topTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
+		body += strings.Join(box("Task Detail", wrapDetailLines(detailLines, width-2), width, bottomTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
 			strings.Join(box("Activity", activityLines, width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n") + "\n" +
 			strings.Join(box("Human Intervention", interventionLines, width, bottomTotal, state.FocusedPane() == model.InterventionPane), "\n")
 	} else {
-		left := max(28, width*2/5)
-		right := max(28, width-left-1)
-		body = strings.Join(joinBoxes(box("Tasks", taskLines, left, topTotal, state.FocusedPane() == model.TaskPane), box("Task Detail", wrapDetailLines(detailLines, right-2), right, topTotal, state.FocusedPane() == model.DetailPane)), "\n") + "\n" +
-			strings.Join(joinBoxes(box("Activity", activityLines, left, bottomTotal, state.FocusedPane() == model.ActivityPane), box("Human Intervention", interventionLines, right, bottomTotal, state.FocusedPane() == model.InterventionPane)), "\n")
+		left := width / 3
+		middle := (width - left - 2) / 2
+		right := width - left - middle - 2
+		body += strings.Join(joinThreeBoxes(
+			box("Task Detail", wrapDetailLines(detailLines, left-2), left, bottomTotal, state.FocusedPane() == model.DetailPane),
+			box("Activity", activityLines, middle, bottomTotal, state.FocusedPane() == model.ActivityPane),
+			box("Human Intervention", interventionLines, right, bottomTotal, state.FocusedPane() == model.InterventionPane),
+		), "\n")
 	}
 	if len(notices) == 0 {
 		return body
@@ -63,51 +63,68 @@ func Render(state *model.Model) string {
 
 func treeLines(state *model.Model, width int) []string {
 	selected, hasSelection := state.SelectedTreeRow()
-	rows := state.VisibleTreeRows()
-	lines := make([]string, 0, len(rows))
-	for _, row := range rows {
+	rows := state.TreeRows()
+	chunks := make([][]string, 0, len(rows))
+	selectedIndex := 0
+	for index, row := range rows {
+		isSelected := hasSelection && row.Kind == selected.Kind && row.Phase == selected.Phase &&
+			(row.Kind == model.PhaseRow || row.Task.ID == selected.Task.ID)
+		if isSelected {
+			selectedIndex = index
+		}
 		if row.Kind == model.PhaseRow {
-			icon := "▶"
+			icon, marker := "▶", " "
 			if row.Expanded {
 				icon = "▼"
 			}
-			marker := " "
-			if hasSelection && selected.Kind == model.PhaseRow && selected.Phase == row.Phase {
+			if isSelected {
 				marker = "→"
 			}
-			lines = append(lines, marker+" "+icon+" "+row.Phase)
+			chunks = append(chunks, []string{marker + " " + icon + " " + row.Phase})
 			continue
 		}
-		last := true
-		for index, candidate := range rows {
-			if candidate.Kind != model.TaskRow || candidate.Task.ID != row.Task.ID {
-				continue
-			}
-			for _, next := range rows[index+1:] {
-				if next.Kind == model.TaskRow && next.Phase == row.Phase {
-					last = false
-				}
-				break
-			}
-			break
-		}
+		last := index+1 == len(rows) || rows[index+1].Kind != model.TaskRow || rows[index+1].Phase != row.Phase
 		branch := "├─ "
 		if last {
 			branch = "└─ "
 		}
 		id, status, marker := row.Task.ID, "["+strings.ToUpper(row.Task.Status)+"]", "  "
-		if hasSelection && selected.Kind == model.TaskRow && row.Task.ID == selected.Task.ID {
+		if isSelected {
 			id, status, marker = selectedText(id), selectedText(status), "→ "
 		}
 		label := marker + branch + id + " " + status + " "
 		indent := strings.Repeat(" ", displayWidth(label))
 		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
-		lines = append(lines, label+wrapped[0])
+		chunk := []string{label + wrapped[0]}
 		for _, continuation := range wrapped[1:] {
-			lines = append(lines, indent+continuation)
+			chunk = append(chunk, indent+continuation)
 		}
+		chunks = append(chunks, chunk)
 	}
-	return lines
+	if len(chunks) == 0 {
+		return nil
+	}
+	viewport := state.Viewport(model.TaskPane)
+	start := 0
+	for index := 0; index < min(viewport.Offset, len(chunks)); index++ {
+		start += len(chunks[index])
+	}
+	selectedStart := 0
+	for index := 0; index < selectedIndex; index++ {
+		selectedStart += len(chunks[index])
+	}
+	selectedEnd := selectedStart + len(chunks[selectedIndex])
+	if selectedStart < start {
+		start = selectedStart
+	}
+	if selectedEnd > start+viewport.Height {
+		start = max(0, selectedEnd-viewport.Height)
+	}
+	var lines []string
+	for _, chunk := range chunks {
+		lines = append(lines, chunk...)
+	}
+	return lines[min(start, len(lines)):min(len(lines), start+max(1, viewport.Height))]
 }
 func activityLines(state *model.Model) []string {
 	all := state.Activity()
@@ -198,11 +215,11 @@ func box(title string, content []string, width, height int, focused bool) []stri
 	lines = append(lines, "└"+strings.Repeat("─", inner)+"┘")
 	return lines
 }
-func joinBoxes(left, right []string) []string {
-	n := min(len(left), len(right))
+func joinThreeBoxes(left, middle, right []string) []string {
+	n := min(len(left), min(len(middle), len(right)))
 	out := make([]string, n)
 	for i := 0; i < n; i++ {
-		out[i] = left[i] + " " + right[i]
+		out[i] = left[i] + " " + middle[i] + " " + right[i]
 	}
 	return out
 }

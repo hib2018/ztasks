@@ -41,18 +41,18 @@ type TreeRow struct {
 type Viewport struct{ Offset, Height int }
 
 type Model struct {
-	tasks              []Task
-	visible            []int
-	selected           int
-	selectedID, filter string
-	activity           []Activity
-	interventions      []Intervention
-	project            ProjectStatus
-	collapsed          map[string]bool
-	treeCursor         int
-	focused            Pane
-	viewports          [4]Viewport
-	width, height      int
+	tasks                             []Task
+	visible                           []int
+	selected                          int
+	selectedID, selectedPhase, filter string
+	activity                          []Activity
+	interventions                     []Intervention
+	project                           ProjectStatus
+	collapsed                         map[string]bool
+	treeCursor                        int
+	focused                           Pane
+	viewports                         [4]Viewport
+	width, height                     int
 }
 
 func New(tasks []Task) *Model {
@@ -186,7 +186,7 @@ func (s *Model) ToggleAllPhases() {
 }
 func (s *Model) SetViewportHeights(top, bottom int) {
 	s.viewports[TaskPane].Height = max(1, top)
-	s.viewports[DetailPane].Height = max(1, top)
+	s.viewports[DetailPane].Height = max(1, bottom)
 	s.viewports[ActivityPane].Height = max(1, bottom)
 	s.viewports[InterventionPane].Height = max(1, bottom)
 	s.ensureCursorVisible()
@@ -244,18 +244,19 @@ func (s *Model) rebuildVisible() {
 	s.selected = 0
 	if s.selectedID != "" {
 		for n, i := range s.visible {
-			if s.tasks[i].ID == s.selectedID {
+			if sameTask(s.tasks[i], s.selectedPhase, s.selectedID) {
 				s.selected = n
 				break
 			}
 		}
 	}
 	if len(s.visible) > 0 {
-		s.selectedID = s.Selected().ID
+		selected := s.tasks[s.visible[s.selected]]
+		s.selectedID, s.selectedPhase = selected.ID, selected.Phase
 	}
 	rows := s.TreeRows()
 	for index, row := range rows {
-		if row.Kind == TaskRow && row.Task.ID == s.selectedID {
+		if row.Kind == TaskRow && sameTask(row.Task, s.selectedPhase, s.selectedID) {
 			s.treeCursor = index
 			break
 		}
@@ -289,21 +290,21 @@ func (s *Model) selectTreeRow(index int) {
 	}
 	s.treeCursor = clamp(index, 0, len(rows)-1)
 	row := rows[s.treeCursor]
-	selectedID := ""
+	selected := Task{}
 	if row.Kind == TaskRow {
-		selectedID = row.Task.ID
+		selected = row.Task
 	} else {
 		for _, task := range s.tasks {
 			if task.Phase == row.Phase && s.matches(task) {
-				selectedID = task.ID
+				selected = task
 				break
 			}
 		}
 	}
-	if selectedID != "" {
-		s.selectedID = selectedID
+	if selected.ID != "" {
+		s.selectedID, s.selectedPhase = selected.ID, selected.Phase
 		for visibleIndex, taskIndex := range s.visible {
-			if s.tasks[taskIndex].ID == selectedID {
+			if sameTask(s.tasks[taskIndex], selected.Phase, selected.ID) {
 				s.selected = visibleIndex
 				break
 			}
@@ -311,6 +312,8 @@ func (s *Model) selectTreeRow(index int) {
 	}
 	s.ensureCursorVisible()
 }
+func sameTask(task Task, phase, id string) bool { return task.ID == id && task.Phase == phase }
+
 func (s *Model) scroll(p Pane, d int) {
 	v := &s.viewports[p]
 	v.Offset = clamp(v.Offset+d, 0, max(0, s.paneLength(p)-max(1, v.Height)))

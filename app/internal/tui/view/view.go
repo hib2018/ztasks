@@ -30,11 +30,15 @@ func Render(state *model.Model) string {
 		height = 30
 	}
 	usable := max(10, height-len(notices)-2)
-	topTotal := max(5, usable*2/3)
+	topTotal := max(5, usable/2)
 	bottomTotal := max(4, usable-topTotal)
 	state.SetViewportHeights(topTotal-2, bottomTotal-2)
 
-	taskLines := treeLines(state)
+	taskWidth := width - 2
+	if width >= 64 {
+		taskWidth = max(8, width*2/5-2)
+	}
+	taskLines := treeLines(state, taskWidth)
 	detailLines := state.DetailLines()
 	activityLines := activityLines(state)
 	interventionLines := interventionLines(state)
@@ -57,7 +61,7 @@ func Render(state *model.Model) string {
 	return strings.Join(notices, "\n") + "\n" + body
 }
 
-func treeLines(state *model.Model) []string {
+func treeLines(state *model.Model, width int) []string {
 	selected, hasSelection := state.SelectedTreeRow()
 	rows := state.VisibleTreeRows()
 	lines := make([]string, 0, len(rows))
@@ -74,11 +78,34 @@ func treeLines(state *model.Model) []string {
 			lines = append(lines, marker+" "+icon+" "+row.Phase)
 			continue
 		}
-		marker := " "
-		if hasSelection && selected.Kind == model.TaskRow && row.Task.ID == selected.Task.ID {
-			marker = "→"
+		last := true
+		for index, candidate := range rows {
+			if candidate.Kind != model.TaskRow || candidate.Task.ID != row.Task.ID {
+				continue
+			}
+			for _, next := range rows[index+1:] {
+				if next.Kind == model.TaskRow && next.Phase == row.Phase {
+					last = false
+				}
+				break
+			}
+			break
 		}
-		lines = append(lines, fmt.Sprintf("  %s %s %-9s %s", marker, row.Task.ID, strings.ToUpper(row.Task.Status), row.Task.Title))
+		branch := "├─ "
+		if last {
+			branch = "└─ "
+		}
+		id, status, marker := row.Task.ID, "["+strings.ToUpper(row.Task.Status)+"]", "  "
+		if hasSelection && selected.Kind == model.TaskRow && row.Task.ID == selected.Task.ID {
+			id, status, marker = selectedText(id), selectedText(status), "→ "
+		}
+		label := marker + branch + id + " " + status + " "
+		indent := strings.Repeat(" ", displayWidth(label))
+		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
+		lines = append(lines, label+wrapped[0])
+		for _, continuation := range wrapped[1:] {
+			lines = append(lines, indent+continuation)
+		}
 	}
 	return lines
 }
@@ -139,6 +166,10 @@ func wrapDetailLines(lines []string, width int) []string {
 		}
 	}
 	return wrapped
+}
+
+func selectedText(value string) string {
+	return "\x1b[38;5;230;48;5;62m" + value + "\x1b[0m"
 }
 
 func leadingSpaces(value string) string {

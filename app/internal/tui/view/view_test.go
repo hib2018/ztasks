@@ -51,6 +51,34 @@ func TestTreeMarksSelectedPhaseRow(t *testing.T) {
 	}
 }
 
+func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
+	state := model.New([]model.Task{
+		{ID: "T001", Phase: "Setup", Title: "A deliberately long task name that wraps", Status: "ready"},
+		{ID: "T002", Phase: "Setup", Title: "Next", Status: "pending"},
+	})
+	state.Resize(48, 30)
+	state.Move(1)
+	output := Render(state)
+	if !strings.Contains(output, selectedText("T002")) || !strings.Contains(output, selectedText("[PENDING]")) {
+		t.Fatalf("selected task number/status not highlighted: %q", output)
+	}
+	if strings.Count(output, "→") != 1 || !strings.Contains(output, "├─") || !strings.Contains(output, "└─") {
+		t.Fatalf("task tree or unique selection marker missing: %s", output)
+	}
+	lines := strings.Split(output, "\n")
+	for index, line := range lines {
+		if strings.Contains(line, "deliberately long") {
+			if index+1 >= len(lines) || !strings.HasPrefix(lines[index+1], "│"+strings.Repeat(" ", 18)) {
+				t.Fatalf("wrapped title continuation is not aligned: %q", lines[index+1])
+			}
+			break
+		}
+	}
+	if state.Viewport(model.TaskPane).Height >= state.Height()/2 {
+		t.Fatalf("task pane should use the upper half: %#v", state.Viewport(model.TaskPane))
+	}
+}
+
 func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
 	state := model.New([]model.Task{{ID: "T001", Phase: "日本語フェーズ", Title: "日本語の長い作業名", Status: "ready"}})
 	state.Resize(80, 24)

@@ -95,16 +95,25 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		}
 		err = projectErr
 	case len(filtered) == 1 && filtered[0] == "tui":
-		status, fetchErr := FetchStatus(client, requestID)
+		status, fetchErr := fetchAllStatus(corePath, projectRoot, client, requestID)
 		if fetchErr != nil {
 			err = fetchErr
 			break
 		}
+		sourceLabels := map[string]string{}
+		for _, source := range status.Sources {
+			sourceLabels[source.Path] = fmt.Sprintf("%s  sha256:%s  (%d tasks)", source.Path, source.Digest, len(source.Tasks))
+		}
 		tasks := make([]tuimodel.Task, len(status.Tasks))
 		for index, task := range status.Tasks {
+			phase := task.Phase
+			if label := sourceLabels[task.Source]; label != "" {
+				phase = label
+			}
 			tasks[index] = tuimodel.Task{
-				ID: task.ID, Phase: task.Phase, Title: task.Title, Status: task.Status,
-				Agent: task.Agent, SessionID: task.SessionID, CurrentAction: task.CurrentAction,
+				ID: task.ID, Phase: phase, Title: task.Title, Status: task.Status,
+				Source: task.Source,
+				Agent:  task.Agent, SessionID: task.SessionID, CurrentAction: task.CurrentAction,
 				UnsatisfiedDependencies: task.UnsatisfiedDependencies,
 			}
 		}
@@ -113,7 +122,7 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 			return 0
 		}
 	case len(filtered) == 1 && filtered[0] == "status":
-		view, fetchErr := FetchStatus(client, requestID)
+		view, fetchErr := fetchAllStatus(corePath, projectRoot, client, requestID)
 		if fetchErr == nil {
 			output, fetchErr = RenderStatus(view, machineReadable)
 		}

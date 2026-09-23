@@ -215,6 +215,8 @@ ztasks help
 ztasks version
 ```
 
+複数の `specs/*/tasks.md` がある場合、`status` はすべてのsourceをpath・短縮digest・Task数付きのツリーで表示します。`--json` は `sources` 配列にsourceごとの `path`, `digest`, `tasks` を返します。定義ファイルやruntime stateは統合しません。
+
 ### Agent execution の記録
 
 ```sh

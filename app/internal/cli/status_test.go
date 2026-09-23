@@ -31,6 +31,27 @@ func TestRenderStatusHumanAndJSONAgree(t *testing.T) {
 	}
 }
 
+func TestRenderMultipleSourcesAsTrees(t *testing.T) {
+	view := StatusView{Sources: []StatusSource{{Path: "specs/001-demo/tasks.md", Digest: "abcdef123456", Tasks: []TaskView{{ID: "T001", Title: "Work", Status: "ready"}}}}}
+	output, err := RenderStatus(view, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{"specs/001-demo/tasks.md", "abcdef123456", "(1 tasks)", "T001", "READY", "Work"} {
+		if !strings.Contains(output, value) {
+			t.Fatalf("output missing %q: %s", value, output)
+		}
+	}
+	encoded, err := RenderStatus(view, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var decoded StatusView
+	if err := json.Unmarshal([]byte(encoded), &decoded); err != nil || len(decoded.Sources) != 1 {
+		t.Fatalf("invalid source JSON: %s (%v)", encoded, err)
+	}
+}
+
 func TestRenderTaskShowIncludesExecutionDetail(t *testing.T) {
 	view := TaskView{ID: "T023", Phase: "Parser", Title: "Implement parser", Status: "running", Agent: "pi", CurrentAction: "editing parser"}
 	output, err := RenderTask(view, false)

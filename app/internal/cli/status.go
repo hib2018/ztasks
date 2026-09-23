@@ -10,6 +10,7 @@ import (
 )
 
 type TaskView struct {
+	Source                  string   `json:"source,omitempty"`
 	ID                      string   `json:"id"`
 	Phase                   string   `json:"phase"`
 	Title                   string   `json:"title"`
@@ -20,8 +21,15 @@ type TaskView struct {
 	UnsatisfiedDependencies []string `json:"unsatisfied_dependencies,omitempty"`
 }
 
+type StatusSource struct {
+	Path   string     `json:"path"`
+	Digest string     `json:"digest"`
+	Tasks  []TaskView `json:"tasks"`
+}
+
 type StatusView struct {
-	Tasks []TaskView `json:"tasks"`
+	Tasks   []TaskView     `json:"tasks"`
+	Sources []StatusSource `json:"sources,omitempty"`
 }
 
 type caller interface {
@@ -65,6 +73,19 @@ func RenderStatus(status StatusView, machineReadable bool) (string, error) {
 		return renderJSON(status)
 	}
 	var output strings.Builder
+	if len(status.Sources) != 0 {
+		for _, source := range status.Sources {
+			fmt.Fprintf(&output, "%s  sha256:%s  (%d tasks)\n", source.Path, source.Digest, len(source.Tasks))
+			for _, task := range source.Tasks {
+				fmt.Fprintf(&output, "  ├─ %-8s %-10s %s", task.ID, strings.ToUpper(task.Status), task.Title)
+				if len(task.UnsatisfiedDependencies) != 0 {
+					fmt.Fprintf(&output, " (depends on %s)", strings.Join(task.UnsatisfiedDependencies, ", "))
+				}
+				output.WriteByte('\n')
+			}
+		}
+		return output.String(), nil
+	}
 	var phase string
 	for _, task := range status.Tasks {
 		if task.Phase != phase {

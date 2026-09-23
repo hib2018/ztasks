@@ -3,8 +3,8 @@ package model
 import "strings"
 
 type Task struct {
-	ID, Phase, Title, Status, Agent, SessionID, CurrentAction string
-	UnsatisfiedDependencies                                   []string
+	ID, Phase, Title, Status, Agent, SessionID, CurrentAction, Source string
+	UnsatisfiedDependencies                                           []string
 }
 type Activity struct {
 	Type, TaskID, Detail string

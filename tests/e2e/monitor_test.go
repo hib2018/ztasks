@@ -13,6 +13,13 @@ import (
 )
 
 type statusResult struct {
+	Sources []struct {
+		Path   string `json:"path"`
+		Digest string `json:"digest"`
+		Tasks  []struct {
+			ID string `json:"id"`
+		} `json:"tasks"`
+	} `json:"sources"`
 	Tasks []struct {
 		ID                      string   `json:"id"`
 		Title                   string   `json:"title"`
@@ -74,6 +81,34 @@ func TestCrossBinaryMonitorRegeneratesDigestBoundArtifactWithoutChangingSource(t
 	changedArtifact := filepath.Join(project, ".ztasks", "sources", hex.EncodeToString(changedDigest[:]), "dependencies.json")
 	if _, err := os.Stat(changedArtifact); err != nil {
 		t.Fatal("changed source did not create a digest-bound artifact")
+	}
+}
+
+func TestStatusListsMultipleTaskSources(t *testing.T) {
+	root := repositoryRoot(t)
+	build(t, root)
+	project := t.TempDir()
+	for index, path := range []string{"specs/001-demo/tasks.md", "specs/004-look/tasks.md"} {
+		full := filepath.Join(project, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("## Phase\n- [ ] T001 Task "+string(rune('A'+index))+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	encoded := runFrontend(t, root, project, "status", "--json")
+	var status statusResult
+	if err := json.Unmarshal(encoded, &status); err != nil {
+		t.Fatal(err)
+	}
+	if len(status.Sources) != 2 || status.Sources[0].Path != "specs/001-demo/tasks.md" || status.Sources[1].Path != "specs/004-look/tasks.md" {
+		t.Fatalf("unexpected multi-source status: %s", encoded)
+	}
+	for _, source := range status.Sources {
+		if len(source.Digest) < 12 || len(source.Tasks) != 1 {
+			t.Fatalf("unexpected source: %#v", source)
+		}
 	}
 }
 

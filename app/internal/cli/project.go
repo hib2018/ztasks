@@ -20,7 +20,7 @@ Usage:
   ztasks init [tasks.md]
   ztasks bootstrap --from-checkboxes [tasks.md]
   ztasks sync [tasks.md]
-  ztasks status [--json]
+  ztasks status [--json]  (lists every specs/*/tasks.md when multiple exist)
   ztasks task show <id> [--json]
   ztasks doctor [--json]
   ztasks help

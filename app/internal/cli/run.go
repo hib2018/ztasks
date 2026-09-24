@@ -95,6 +95,10 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		}
 		err = projectErr
 	case len(filtered) == 1 && filtered[0] == "tui":
+		if syncErr := autoSyncChangedSource(projectRoot, client, requestID); syncErr != nil {
+			err = syncErr
+			break
+		}
 		status, fetchErr := fetchAllStatus(corePath, projectRoot, client, requestID)
 		if fetchErr != nil {
 			err = fetchErr

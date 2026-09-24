@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -12,23 +15,10 @@ import (
 )
 
 func fetchAllStatus(corePath, root string, fallback caller, requestID string) (StatusView, error) {
-	var paths []string
-	err := filepath.WalkDir(filepath.Join(root, "specs"), func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !entry.IsDir() && entry.Name() == "tasks.md" {
-			rel, relErr := filepath.Rel(root, path)
-			if relErr == nil {
-				paths = append(paths, filepath.ToSlash(rel))
-			}
-		}
-		return nil
-	})
+	paths, err := taskSources(root)
 	if err != nil || len(paths) < 2 {
 		return FetchStatus(fallback, requestID)
 	}
-	sort.Strings(paths)
 	result := StatusView{}
 	for i, path := range paths {
 		client, startErr := coreclient.Start(corePath, root, path)
@@ -74,4 +64,50 @@ func fetchAllStatus(corePath, root string, fallback caller, requestID string) (S
 		}
 	}
 	return result, nil
+}
+
+func taskSources(root string) ([]string, error) {
+	var paths []string
+	err := filepath.WalkDir(filepath.Join(root, "specs"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !entry.IsDir() && entry.Name() == "tasks.md" {
+			rel, relErr := filepath.Rel(root, path)
+			if relErr == nil {
+				paths = append(paths, filepath.ToSlash(rel))
+			}
+		}
+		return nil
+	})
+	sort.Strings(paths)
+	return paths, err
+}
+
+func autoSyncChangedSource(root string, client caller, requestID string) error {
+	paths, err := taskSources(root)
+	if err != nil || len(paths) != 1 {
+		return err
+	}
+	result, err := Execute(client, BuildProjectRequest(requestID+"-inspect", "inspect", ""))
+	if err != nil {
+		return nil
+	}
+	var inspect struct {
+		Initialized  bool   `json:"initialized"`
+		SourceDigest string `json:"source_digest"`
+	}
+	if err := json.Unmarshal(result, &inspect); err != nil || !inspect.Initialized {
+		return err
+	}
+	bytes, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(paths[0])))
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(bytes)
+	if inspect.SourceDigest == "sha256:"+hex.EncodeToString(digest[:]) {
+		return nil
+	}
+	_, err = Execute(client, BuildProjectRequest(requestID+"-sync", "sync", paths[0]))
+	return err
 }

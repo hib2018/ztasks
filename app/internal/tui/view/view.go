@@ -138,7 +138,7 @@ func wrapDetailLines(lines []string, width int) []string {
 	}
 	wrapped := make([]string, 0, len(lines))
 	for _, line := range lines {
-		if strings.HasPrefix(line, "Title   : ") {
+		if strings.Contains(line, " : ") {
 			wrapped = append(wrapped, fit(line, width))
 			continue
 		}

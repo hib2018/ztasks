@@ -129,18 +129,21 @@ func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
 	}
 }
 
-func TestWrapDetailLinesKeepsStateTitleOnOneLineAndAlignsLogDetail(t *testing.T) {
+func TestWrapDetailLinesKeepsStateFieldsOnOneLineAndAlignsLogDetail(t *testing.T) {
 	lines := wrapDetailLines([]string{
 		"Title   : A long selected task title that should stay on one line",
+		"Action  : A long current action that should also stay on one line",
 		"event     task.progress T001  — A long event detail that should wrap neatly",
 	}, 48)
-	if len(lines) < 3 {
+	if len(lines) < 4 {
 		t.Fatalf("log detail did not wrap: %#v", lines)
 	}
-	if displayWidth(lines[0]) > 48 || !strings.HasPrefix(lines[0], "Title   : ") {
-		t.Fatalf("state title was not kept to one line: %#v", lines)
+	for _, line := range lines[:2] {
+		if displayWidth(line) > 48 || !strings.Contains(line, " : ") {
+			t.Fatalf("state field was not kept to one line: %#v", lines)
+		}
 	}
-	for _, line := range lines[1:] {
+	for _, line := range lines[2:] {
 		if !strings.HasPrefix(line, "event     task.progress T001  — ") {
 			t.Fatalf("log continuation did not align with detail: %#v", lines)
 		}

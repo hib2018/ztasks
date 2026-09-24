@@ -141,7 +141,7 @@ func (s *Model) Boundary(last bool) {
 	}
 }
 func (s *Model) Focus(delta int) {
-	n := int(InterventionPane) + 1
+	n := int(ActivityPane) + 1
 	s.focused = Pane((int(s.focused) + delta + n) % n)
 }
 func (s *Model) Filter(q string) {
@@ -188,9 +188,8 @@ func (s *Model) SetViewportHeights(top, bottom int) {
 	s.viewports[TaskPane].Height = max(1, top)
 	s.viewports[DetailPane].Height = max(1, bottom)
 	s.viewports[ActivityPane].Height = max(1, bottom)
-	s.viewports[InterventionPane].Height = max(1, bottom)
 	s.ensureCursorVisible()
-	for p := DetailPane; p <= InterventionPane; p++ {
+	for p := DetailPane; p <= ActivityPane; p++ {
 		s.viewports[p].Offset = clamp(s.viewports[p].Offset, 0, max(0, s.paneLength(p)-s.viewports[p].Height))
 	}
 }
@@ -231,6 +230,13 @@ func (s *Model) VisibleTreeRows() []TreeRow {
 func (s *Model) DetailLines() []string {
 	lines := s.detailLines()
 	v := s.viewports[DetailPane]
+	a := clamp(v.Offset, 0, len(lines))
+	b := min(len(lines), a+max(1, v.Height))
+	return append([]string(nil), lines[a:b]...)
+}
+func (s *Model) LogLines() []string {
+	lines := s.logLines()
+	v := s.viewports[ActivityPane]
 	a := clamp(v.Offset, 0, len(lines))
 	b := min(len(lines), a+max(1, v.Height))
 	return append([]string(nil), lines[a:b]...)
@@ -325,9 +331,7 @@ func (s *Model) paneLength(p Pane) int {
 	case DetailPane:
 		return len(s.detailLines())
 	case ActivityPane:
-		return len(s.activity)
-	case InterventionPane:
-		return len(s.interventions)
+		return len(s.logLines())
 	default:
 		return len(s.TreeRows())
 	}
@@ -352,6 +356,44 @@ func (s *Model) detailLines() []string {
 		for _, d := range t.UnsatisfiedDependencies {
 			out = append(out, "  ○ "+d+" (unsatisfied)")
 		}
+	}
+	if len(s.interventions) > 0 {
+		out = append(out, "Human requests:")
+		for _, item := range s.interventions {
+			line := "  " + strings.ToUpper(item.Action) + " " + strings.ToUpper(item.State)
+			if item.State == "pending" {
+				line = "  " + strings.ToUpper(item.Action) + " REQUESTED"
+			}
+			if item.Detail != "" {
+				line += " — " + item.Detail
+			}
+			out = append(out, line)
+		}
+	}
+	return out
+}
+func (s *Model) logLines() []string {
+	out := make([]string, 0, len(s.activity)+len(s.interventions))
+	for _, item := range s.activity {
+		line := item.Type + " " + item.TaskID
+		if item.Stale {
+			line = "[STALE] " + line
+		}
+		if item.Detail != "" {
+			line += " — " + item.Detail
+		}
+		out = append(out, line)
+	}
+	for _, item := range s.interventions {
+		label := strings.ToUpper(item.State)
+		if item.State == "pending" {
+			label = "REQUESTED"
+		}
+		line := "human." + item.Action + " " + label
+		if item.Detail != "" {
+			line += " — " + item.Detail
+		}
+		out = append(out, line)
 	}
 	return out
 }

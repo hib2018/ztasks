@@ -32,12 +32,15 @@ func TestRenderFramesEveryPaneAndMarksFocus(t *testing.T) {
 	state.SetActivity([]model.Activity{{Type: "task.started", TaskID: "T001"}})
 	state.SetInterventions([]model.Intervention{{Action: "pause", State: "pending"}})
 	output := Render(state)
-	for _, title := range []string{"[ Tasks — READY:1 ]", "Task Detail", "Activity", "Human Intervention"} {
+	for _, title := range []string{"[ Tasks — READY:1 ]", "State", "Log"} {
 		if !strings.Contains(output, title) {
 			t.Fatalf("framed pane %q missing: %s", title, output)
 		}
 	}
-	if strings.Count(output, "┌") < 4 || strings.Count(output, "┘") < 4 {
+	if !strings.Contains(output, "human.pause REQUESTED") || !strings.Contains(output, "Human requests:") {
+		t.Fatalf("human request missing from state/log: %s", output)
+	}
+	if strings.Count(output, "┌") < 3 || strings.Count(output, "┘") < 3 {
 		t.Fatalf("not every pane is framed: %s", output)
 	}
 }
@@ -76,6 +79,18 @@ func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
 	}
 	if state.Viewport(model.TaskPane).Height >= state.Height()/2 {
 		t.Fatalf("task pane should use the upper half: %#v", state.Viewport(model.TaskPane))
+	}
+}
+
+func TestTaskTitlesStartInSameColumnAfterStatus(t *testing.T) {
+	state := model.New([]model.Task{
+		{ID: "T001", Phase: "Setup", Title: "Long status", Status: "pending"},
+		{ID: "T002", Phase: "Setup", Title: "Short", Status: "ready"},
+	})
+	state.Resize(80, 24)
+	output := Render(state)
+	if !strings.Contains(output, "[READY]   Short") {
+		t.Fatalf("ready title was not padded to the status column: %s", output)
 	}
 }
 

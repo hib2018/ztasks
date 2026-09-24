@@ -345,7 +345,7 @@ func (s *Model) detailLines() []string {
 		stateField("Task", t.ID),
 		stateField("Title", t.Title),
 		stateField("Status", strings.ToUpper(t.Status)),
-		stateField("Phase", t.Phase),
+		stateField("Phase", displayPhase(t.Phase)),
 	}
 	if t.Agent != "" {
 		out = append(out, stateField("Agent", t.Agent))
@@ -393,6 +393,18 @@ func (s *Model) logLines() []string {
 }
 func stateField(label, value string) string {
 	return label + strings.Repeat(" ", max(0, 7-len(label))) + " : " + value
+}
+func displayPhase(phase string) string {
+	start := strings.Index(phase, " (Priority: ")
+	if start < 0 {
+		return phase
+	}
+	close := strings.Index(phase[start:], ")")
+	if close < 0 {
+		return phase
+	}
+	priority := phase[start+2 : start+close]
+	return phase[:start] + "  " + priority + phase[start+close+1:]
 }
 func requestState(state string) string {
 	if state == "pending" {

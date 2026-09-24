@@ -82,6 +82,15 @@ func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
 	}
 }
 
+func TestPhasePriorityDropsParentheses(t *testing.T) {
+	state := model.New([]model.Task{{ID: "T001", Phase: "Phase 3: Story (Priority: P1)", Title: "Work", Status: "ready"}})
+	state.Resize(100, 24)
+	output := Render(state)
+	if strings.Contains(output, "(Priority: P1)") || !strings.Contains(output, "Phase 3: Story  Priority: P1") {
+		t.Fatalf("priority parentheses were not removed: %s", output)
+	}
+}
+
 func TestTaskTitlesStartInSameColumnAfterStatus(t *testing.T) {
 	state := model.New([]model.Task{
 		{ID: "T001", Phase: "Setup", Title: "Long status", Status: "pending"},

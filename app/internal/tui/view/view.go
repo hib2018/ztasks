@@ -81,7 +81,7 @@ func treeLines(state *model.Model, width int) []string {
 			if isSelected {
 				marker = "→"
 			}
-			chunks = append(chunks, []string{marker + " " + icon + " " + row.Phase})
+			chunks = append(chunks, []string{marker + " " + icon + " " + displayPhase(row.Phase)})
 			continue
 		}
 		last := index+1 == len(rows) || rows[index+1].Kind != model.TaskRow || rows[index+1].Phase != row.Phase
@@ -98,7 +98,7 @@ func treeLines(state *model.Model, width int) []string {
 		if last {
 			branchContinuation = "   "
 		}
-		indent := strings.Repeat(" ", displayWidth(marker)) + branchContinuation + strings.Repeat(" ", displayWidth(id+" "+status+" "))
+		indent := strings.Repeat(" ", displayWidth(marker)) + branchContinuation
 		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
 		chunk := []string{label + wrapped[0]}
 		for _, continuation := range wrapped[1:] {
@@ -151,6 +151,19 @@ func wrapDetailLines(lines []string, width int) []string {
 		}
 	}
 	return wrapped
+}
+
+func displayPhase(phase string) string {
+	start := strings.Index(phase, " (Priority: ")
+	if start < 0 {
+		return phase
+	}
+	close := strings.Index(phase[start:], ")")
+	if close < 0 {
+		return phase
+	}
+	priority := phase[start+2 : start+close]
+	return phase[:start] + "  " + priority + phase[start+close+1:]
 }
 
 func taskColumnWidths(rows []model.TreeRow) (int, int) {

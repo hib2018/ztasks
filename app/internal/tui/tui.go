@@ -26,6 +26,8 @@ func NewWithBootstrap(tasks []model.Task, bootstrap BootstrapFunc) *Monitor {
 	return &Monitor{state: model.New(tasks), bootstrap: bootstrap}
 }
 
+func (monitor *Monitor) SetNotice(notice string) { monitor.notice = notice }
+
 func (monitor *Monitor) Init() tea.Cmd { return nil }
 
 func (monitor *Monitor) Update(message tea.Msg) (tea.Model, tea.Cmd) {

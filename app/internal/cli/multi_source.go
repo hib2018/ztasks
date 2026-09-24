@@ -84,30 +84,42 @@ func taskSources(root string) ([]string, error) {
 	return paths, err
 }
 
-func autoSyncChangedSource(root string, client caller, requestID string) error {
+func autoSyncChangedSource(root string, client caller, requestID string) (string, error) {
 	paths, err := taskSources(root)
-	if err != nil || len(paths) != 1 {
-		return err
+	if err != nil {
+		return "Sync skipped: cannot scan task sources", nil
+	}
+	if len(paths) == 0 {
+		return "Sync skipped: no task source", nil
+	}
+	if len(paths) != 1 {
+		return "Sync skipped: multiple task sources", nil
 	}
 	result, err := Execute(client, BuildProjectRequest(requestID+"-inspect", "inspect", ""))
 	if err != nil {
-		return nil
+		return "Sync skipped: project not initialized. Press b to bootstrap from checkboxes.", nil
 	}
 	var inspect struct {
 		Initialized  bool   `json:"initialized"`
 		SourceDigest string `json:"source_digest"`
 	}
-	if err := json.Unmarshal(result, &inspect); err != nil || !inspect.Initialized {
-		return err
+	if err := json.Unmarshal(result, &inspect); err != nil {
+		return "", err
+	}
+	if !inspect.Initialized {
+		return "Sync skipped: project not initialized. Press b to bootstrap from checkboxes.", nil
 	}
 	bytes, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(paths[0])))
 	if err != nil {
-		return err
+		return "", err
 	}
 	digest := sha256.Sum256(bytes)
 	if inspect.SourceDigest == "sha256:"+hex.EncodeToString(digest[:]) {
-		return nil
+		return "Sync skipped: source unchanged", nil
 	}
 	_, err = Execute(client, BuildProjectRequest(requestID+"-sync", "sync", paths[0]))
-	return err
+	if err != nil {
+		return "", err
+	}
+	return "Sync complete: tasks.md changed", nil
 }

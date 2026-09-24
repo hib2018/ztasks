@@ -95,7 +95,8 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		}
 		err = projectErr
 	case len(filtered) == 1 && filtered[0] == "tui":
-		if syncErr := autoSyncChangedSource(projectRoot, client, requestID); syncErr != nil {
+		syncNotice, syncErr := autoSyncChangedSource(projectRoot, client, requestID)
+		if syncErr != nil {
 			err = syncErr
 			break
 		}
@@ -119,7 +120,9 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 			}
 			return statusToTUITasks(status), nil
 		}
-		_, err = tea.NewProgram(tui.NewWithBootstrap(statusToTUITasks(status), bootstrap), tea.WithInput(os.Stdin), tea.WithOutput(stdout)).Run()
+		monitor := tui.NewWithBootstrap(statusToTUITasks(status), bootstrap)
+		monitor.SetNotice(syncNotice)
+		_, err = tea.NewProgram(monitor, tea.WithInput(os.Stdin), tea.WithOutput(stdout)).Run()
 		if err == nil {
 			return 0
 		}

@@ -71,8 +71,8 @@ func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
 	lines := strings.Split(output, "\n")
 	for index, line := range lines {
 		if strings.Contains(line, "deliberately long") {
-			if index+1 >= len(lines) || !strings.HasPrefix(lines[index+1], "│  │") {
-				t.Fatalf("wrapped title continuation is not aligned with tree guide: %q", lines[index+1])
+			if index+1 >= len(lines) || !strings.HasPrefix(lines[index+1], "│"+strings.Repeat(" ", 20)) {
+				t.Fatalf("wrapped title continuation is not aligned with title column: %q", lines[index+1])
 			}
 			break
 		}
@@ -126,6 +126,22 @@ func TestRenderKeepsFrameWidthWithWideCharacters(t *testing.T) {
 		if got := ansi.StringWidth(line); got != 80 {
 			t.Fatalf("line %d display width = %d, want 80: %q", number+1, got, line)
 		}
+	}
+}
+
+func TestWrapDetailLinesAlignsContinuationAfterLabels(t *testing.T) {
+	lines := wrapDetailLines([]string{
+		"Title   : A long selected task title that should wrap neatly",
+		"event     task.progress T001  — A long event detail that should wrap neatly",
+	}, 48)
+	if len(lines) < 4 {
+		t.Fatalf("lines did not wrap: %#v", lines)
+	}
+	if !strings.HasPrefix(lines[1], "Title   : ") {
+		t.Fatalf("state continuation did not align with value: %#v", lines)
+	}
+	if !strings.HasPrefix(lines[3], "event     task.progress T001  — ") {
+		t.Fatalf("log continuation did not align with detail: %#v", lines)
 	}
 }
 

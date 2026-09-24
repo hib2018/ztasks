@@ -94,11 +94,7 @@ func treeLines(state *model.Model, width int) []string {
 			id, status, marker = selectedText(id), selectedText(status), "→ "
 		}
 		label := marker + branch + id + " " + status + " "
-		branchContinuation := "│  "
-		if last {
-			branchContinuation = "   "
-		}
-		indent := strings.Repeat(" ", displayWidth(marker)) + branchContinuation
+		indent := strings.Repeat(" ", displayWidth(label))
 		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
 		chunk := []string{label + wrapped[0]}
 		for _, continuation := range wrapped[1:] {
@@ -138,19 +134,35 @@ func wrapDetailLines(lines []string, width int) []string {
 	}
 	wrapped := make([]string, 0, len(lines))
 	for _, line := range lines {
-		indent := leadingSpaces(line)
-		content := strings.TrimPrefix(line, indent)
-		contentWidth := width - displayWidth(indent)
-		if contentWidth <= 0 {
-			wrapped = append(wrapped, fit(indent, width))
+		prefix, content := wrapPrefix(line)
+		contentWidth := width - displayWidth(prefix)
+		if content == "" || contentWidth <= 0 {
+			wrapped = append(wrapped, fit(line, width))
 			continue
 		}
 		parts := strings.Split(ansi.Wrap(content, contentWidth, " "), "\n")
 		for _, part := range parts {
-			wrapped = append(wrapped, indent+part)
+			wrapped = append(wrapped, prefix+part)
 		}
 	}
 	return wrapped
+}
+
+func wrapPrefix(line string) (string, string) {
+	for _, separator := range []string{" : ", "  — "} {
+		if index := strings.Index(line, separator); index >= 0 {
+			end := index + len(separator)
+			return line[:end], line[end:]
+		}
+	}
+	if strings.HasPrefix(line, "  • ") {
+		return "  • ", line[len("  • "):]
+	}
+	if len(line) > 10 && strings.TrimSpace(line[:10]) != "" {
+		return line[:10], line[10:]
+	}
+	indent := leadingSpaces(line)
+	return indent, strings.TrimPrefix(line, indent)
 }
 
 func displayPhase(phase string) string {

@@ -341,12 +341,7 @@ func (s *Model) detailLines() []string {
 	if t.ID == "" {
 		return nil
 	}
-	out := []string{
-		stateField("Task", t.ID),
-		stateField("Title", t.Title),
-		stateField("Status", strings.ToUpper(t.Status)),
-		stateField("Phase", displayPhase(t.Phase)),
-	}
+	var out []string
 	if t.Agent != "" {
 		out = append(out, stateField("Agent", t.Agent))
 	}
@@ -354,16 +349,22 @@ func (s *Model) detailLines() []string {
 		out = append(out, stateField("Session", t.SessionID))
 	}
 	if t.CurrentAction != "" {
-		out = append(out, stateField("Action", t.CurrentAction))
+		out = append(out, stateField("Current action", t.CurrentAction))
 	}
 	if len(t.UnsatisfiedDependencies) > 0 {
-		out = append(out, "", "Dependencies")
+		if len(out) > 0 {
+			out = append(out, "")
+		}
+		out = append(out, "Unsatisfied dependencies")
 		for _, d := range t.UnsatisfiedDependencies {
 			out = append(out, "  • "+d+"  unsatisfied")
 		}
 	}
 	if len(s.interventions) > 0 {
-		out = append(out, "", "Human requests")
+		if len(out) > 0 {
+			out = append(out, "")
+		}
+		out = append(out, "Human requests")
 		for _, item := range s.interventions {
 			line := "  • " + strings.ToUpper(item.Action) + "  " + requestState(item.State)
 			if item.Detail != "" {
@@ -371,6 +372,9 @@ func (s *Model) detailLines() []string {
 			}
 			out = append(out, line)
 		}
+	}
+	if len(out) == 0 {
+		return []string{"No active runtime state"}
 	}
 	return out
 }
@@ -393,18 +397,6 @@ func (s *Model) logLines() []string {
 }
 func stateField(label, value string) string {
 	return label + strings.Repeat(" ", max(0, 7-len(label))) + " : " + value
-}
-func displayPhase(phase string) string {
-	start := strings.Index(phase, " (Priority: ")
-	if start < 0 {
-		return phase
-	}
-	close := strings.Index(phase[start:], ")")
-	if close < 0 {
-		return phase
-	}
-	priority := phase[start+2 : start+close]
-	return phase[:start] + "  " + priority + phase[start+close+1:]
 }
 func requestState(state string) string {
 	if state == "pending" {

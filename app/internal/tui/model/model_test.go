@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSelectionFilteringAndDetail(t *testing.T) {
 	state := New([]Task{
@@ -17,6 +20,35 @@ func TestSelectionFilteringAndDetail(t *testing.T) {
 	state.Filter("setup")
 	if state.Selected().ID != "T001" || len(state.Visible()) != 1 {
 		t.Fatalf("filter did not retain phase match: %#v", state.Visible())
+	}
+}
+
+func TestDetailShowsOnlyRuntimeState(t *testing.T) {
+	state := New([]Task{{
+		ID: "T001", Phase: "Setup", Title: "Build core", Status: "running",
+		Agent: "pi", SessionID: "session-1", CurrentAction: "editing",
+		UnsatisfiedDependencies: []string{"T000"},
+	}})
+	state.SetInterventions([]Intervention{{Action: "pause", State: "pending"}})
+	state.SetViewportHeights(20, 20)
+	lines := state.DetailLines()
+	joined := strings.Join(lines, "\n")
+	for _, expected := range []string{"Agent", "Session", "Current action", "Unsatisfied dependencies", "Human requests"} {
+		if !strings.Contains(joined, expected) {
+			t.Fatalf("runtime state omitted %q: %s", expected, joined)
+		}
+	}
+	for _, duplicate := range []string{"Task", "Title", "Status", "Phase"} {
+		if strings.Contains(joined, duplicate+" ") {
+			t.Fatalf("state duplicated task field %q: %s", duplicate, joined)
+		}
+	}
+}
+
+func TestDetailShowsEmptyRuntimeState(t *testing.T) {
+	state := New([]Task{{ID: "T001", Phase: "Setup", Title: "Build core", Status: "ready"}})
+	if got := state.DetailLines(); len(got) != 1 || got[0] != "No active runtime state" {
+		t.Fatalf("empty runtime state = %#v", got)
 	}
 }
 

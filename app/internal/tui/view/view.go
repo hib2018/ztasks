@@ -123,7 +123,11 @@ func treeLines(state *model.Model, width int) []string {
 		start = selectedStart
 	}
 	if selectedEnd > start+viewport.Height {
-		start = max(0, selectedEnd-viewport.Height)
+		if len(chunks[selectedIndex]) >= viewport.Height {
+			start = selectedStart
+		} else {
+			start = max(0, selectedEnd-viewport.Height)
+		}
 	}
 	var lines []string
 	for _, chunk := range chunks {
@@ -166,7 +170,7 @@ func wrapPrefix(line string) (string, string) {
 	if strings.HasPrefix(line, "  • ") {
 		return "  • ", line[len("  • "):]
 	}
-	if len(line) > 10 && strings.TrimSpace(line[:10]) != "" {
+	if len(line) > 10 && (strings.HasPrefix(line, "event     ") || strings.HasPrefix(line, "stale     ") || strings.HasPrefix(line, "human     ") || strings.HasPrefix(line, "Kind      ")) {
 		return line[:10], line[10:]
 	}
 	indent := leadingSpaces(line)

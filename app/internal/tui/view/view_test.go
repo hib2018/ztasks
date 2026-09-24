@@ -37,7 +37,7 @@ func TestRenderFramesEveryPaneAndMarksFocus(t *testing.T) {
 			t.Fatalf("framed pane %q missing: %s", title, output)
 		}
 	}
-	if !strings.Contains(output, "human.pause REQUESTED") || !strings.Contains(output, "Human requests:") {
+	if !strings.Contains(output, "human     pause REQUESTED") || !strings.Contains(output, "Human requests") {
 		t.Fatalf("human request missing from state/log: %s", output)
 	}
 	if strings.Count(output, "┌") < 3 || strings.Count(output, "┘") < 3 {

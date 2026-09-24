@@ -17,7 +17,7 @@ func TestRenderShowsMissingDefinitionSyncWarningsAndStaleActivity(t *testing.T) 
 	})
 	state.SetActivity([]model.Activity{{Type: "task.progress", TaskID: "T001", Detail: "old action", Stale: true}})
 	output := Render(state)
-	for _, expected := range []string{"DEFINITION MISSING", "Sync: +T002", "-T001", "Warning: snapshot is stale", "[STALE]"} {
+	for _, expected := range []string{"DEFINITION MISSING", "Sync: +T002", "-T001", "Warning: snapshot is stale", "stale     task.progress"} {
 		if !strings.Contains(output, expected) {
 			t.Fatalf("render omitted %q: %s", expected, output)
 		}

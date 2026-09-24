@@ -46,13 +46,13 @@ func Render(state *model.Model) string {
 	body = strings.Join(box(taskTitle, taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n"
 	if width < 64 {
 		body += strings.Join(box("State", wrapDetailLines(detailLines, width-2), width, bottomTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
-			strings.Join(box("Log", logLines, width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n")
+			strings.Join(box("Log", wrapDetailLines(logLines, width-2), width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n")
 	} else {
 		left := width / 2
 		right := width - left - 1
 		body += strings.Join(joinTwoBoxes(
 			box("State", wrapDetailLines(detailLines, left-2), left, bottomTotal, state.FocusedPane() == model.DetailPane),
-			box("Log", logLines, right, bottomTotal, state.FocusedPane() == model.ActivityPane),
+			box("Log", wrapDetailLines(logLines, right-2), right, bottomTotal, state.FocusedPane() == model.ActivityPane),
 		), "\n")
 	}
 	if len(notices) == 0 {

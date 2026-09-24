@@ -341,31 +341,33 @@ func (s *Model) detailLines() []string {
 	if t.ID == "" {
 		return nil
 	}
-	out := []string{t.ID + " — " + t.Title, "Status: " + strings.ToUpper(t.Status), "Phase: " + t.Phase}
+	out := []string{
+		stateField("Task", t.ID),
+		stateField("Title", t.Title),
+		stateField("Status", strings.ToUpper(t.Status)),
+		stateField("Phase", t.Phase),
+	}
 	if t.Agent != "" {
-		out = append(out, "Agent: "+t.Agent)
+		out = append(out, stateField("Agent", t.Agent))
 	}
 	if t.SessionID != "" {
-		out = append(out, "Session: "+t.SessionID)
+		out = append(out, stateField("Session", t.SessionID))
 	}
 	if t.CurrentAction != "" {
-		out = append(out, "Current action: "+t.CurrentAction)
+		out = append(out, stateField("Action", t.CurrentAction))
 	}
 	if len(t.UnsatisfiedDependencies) > 0 {
-		out = append(out, "Dependencies:")
+		out = append(out, "", "Dependencies")
 		for _, d := range t.UnsatisfiedDependencies {
-			out = append(out, "  ○ "+d+" (unsatisfied)")
+			out = append(out, "  • "+d+"  unsatisfied")
 		}
 	}
 	if len(s.interventions) > 0 {
-		out = append(out, "Human requests:")
+		out = append(out, "", "Human requests")
 		for _, item := range s.interventions {
-			line := "  " + strings.ToUpper(item.Action) + " " + strings.ToUpper(item.State)
-			if item.State == "pending" {
-				line = "  " + strings.ToUpper(item.Action) + " REQUESTED"
-			}
+			line := "  • " + strings.ToUpper(item.Action) + "  " + requestState(item.State)
 			if item.Detail != "" {
-				line += " — " + item.Detail
+				line += "  — " + item.Detail
 			}
 			out = append(out, line)
 		}
@@ -373,29 +375,37 @@ func (s *Model) detailLines() []string {
 	return out
 }
 func (s *Model) logLines() []string {
-	out := make([]string, 0, len(s.activity)+len(s.interventions))
+	out := make([]string, 0, len(s.activity)+len(s.interventions)+1)
+	if len(s.activity)+len(s.interventions) != 0 {
+		out = append(out, "Kind      Event/Task                 Detail")
+	}
 	for _, item := range s.activity {
-		line := item.Type + " " + item.TaskID
+		kind := "event"
 		if item.Stale {
-			line = "[STALE] " + line
+			kind = "stale"
 		}
-		if item.Detail != "" {
-			line += " — " + item.Detail
-		}
-		out = append(out, line)
+		out = append(out, logField(kind, item.Type+" "+item.TaskID, item.Detail))
 	}
 	for _, item := range s.interventions {
-		label := strings.ToUpper(item.State)
-		if item.State == "pending" {
-			label = "REQUESTED"
-		}
-		line := "human." + item.Action + " " + label
-		if item.Detail != "" {
-			line += " — " + item.Detail
-		}
-		out = append(out, line)
+		out = append(out, logField("human", item.Action+" "+requestState(item.State), item.Detail))
 	}
 	return out
+}
+func stateField(label, value string) string {
+	return label + strings.Repeat(" ", max(0, 7-len(label))) + " : " + value
+}
+func requestState(state string) string {
+	if state == "pending" {
+		return "REQUESTED"
+	}
+	return strings.ToUpper(state)
+}
+func logField(kind, event, detail string) string {
+	line := kind + strings.Repeat(" ", max(0, 10-len(kind))) + event
+	if detail != "" {
+		line += "  — " + detail
+	}
+	return line
 }
 func clamp(v, lo, hi int) int {
 	if v < lo {

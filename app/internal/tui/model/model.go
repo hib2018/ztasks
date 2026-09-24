@@ -194,6 +194,11 @@ func (s *Model) SetViewportHeights(top, bottom int) {
 	}
 }
 
+func (s *Model) SetTasks(tasks []Task) {
+	s.tasks = append([]Task(nil), tasks...)
+	s.rebuildVisible()
+}
+
 func (s *Model) Tasks() []Task { return append([]Task(nil), s.tasks...) }
 
 func (s *Model) Visible() []Task {

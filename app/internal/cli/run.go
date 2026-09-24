@@ -104,24 +104,22 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 			err = fetchErr
 			break
 		}
-		sourceLabels := map[string]string{}
-		for _, source := range status.Sources {
-			sourceLabels[source.Path] = fmt.Sprintf("%s  sha256:%s  (%d tasks)", source.Path, source.Digest, len(source.Tasks))
-		}
-		tasks := make([]tuimodel.Task, len(status.Tasks))
-		for index, task := range status.Tasks {
-			phase := task.Phase
-			if label := sourceLabels[task.Source]; label != "" {
-				phase = label
+		bootstrap := func() ([]tuimodel.Task, error) {
+			paths, _ := taskSources(projectRoot)
+			locator := ""
+			if len(paths) == 1 {
+				locator = paths[0]
 			}
-			tasks[index] = tuimodel.Task{
-				ID: task.ID, Phase: phase, Title: task.Title, Status: task.Status,
-				Source: task.Source,
-				Agent:  task.Agent, SessionID: task.SessionID, CurrentAction: task.CurrentAction,
-				UnsatisfiedDependencies: task.UnsatisfiedDependencies,
+			if _, err := Execute(client, BuildProjectRequest(newRequestID(), "bootstrap", locator)); err != nil {
+				return nil, err
 			}
+			status, err := fetchAllStatus(corePath, projectRoot, client, newRequestID())
+			if err != nil {
+				return nil, err
+			}
+			return statusToTUITasks(status), nil
 		}
-		_, err = tea.NewProgram(tui.New(tasks), tea.WithInput(os.Stdin), tea.WithOutput(stdout)).Run()
+		_, err = tea.NewProgram(tui.NewWithBootstrap(statusToTUITasks(status), bootstrap), tea.WithInput(os.Stdin), tea.WithOutput(stdout)).Run()
 		if err == nil {
 			return 0
 		}
@@ -216,6 +214,27 @@ func Run(arguments []string, stdout, stderr io.Writer) int {
 		return 3
 	}
 	return 0
+}
+
+func statusToTUITasks(status StatusView) []tuimodel.Task {
+	sourceLabels := map[string]string{}
+	for _, source := range status.Sources {
+		sourceLabels[source.Path] = fmt.Sprintf("%s  sha256:%s  (%d tasks)", source.Path, source.Digest, len(source.Tasks))
+	}
+	tasks := make([]tuimodel.Task, len(status.Tasks))
+	for index, task := range status.Tasks {
+		phase := task.Phase
+		if label := sourceLabels[task.Source]; label != "" {
+			phase = label
+		}
+		tasks[index] = tuimodel.Task{
+			ID: task.ID, Phase: phase, Title: task.Title, Status: task.Status,
+			Source: task.Source,
+			Agent:  task.Agent, SessionID: task.SessionID, CurrentAction: task.CurrentAction,
+			UnsatisfiedDependencies: task.UnsatisfiedDependencies,
+		}
+	}
+	return tasks
 }
 
 func flagValues(arguments []string) map[string]string {

@@ -8,14 +8,22 @@ import (
 	modelview "github.com/hib2018/ztasks/app/internal/tui/view"
 )
 
+type BootstrapFunc func() ([]model.Task, error)
+
 type Monitor struct {
 	state     *model.Model
 	filtering bool
 	filter    string
+	bootstrap BootstrapFunc
+	notice    string
 }
 
 func New(tasks []model.Task) *Monitor {
-	return &Monitor{state: model.New(tasks)}
+	return NewWithBootstrap(tasks, nil)
+}
+
+func NewWithBootstrap(tasks []model.Task, bootstrap BootstrapFunc) *Monitor {
+	return &Monitor{state: model.New(tasks), bootstrap: bootstrap}
 }
 
 func (monitor *Monitor) Init() tea.Cmd { return nil }
@@ -69,6 +77,16 @@ func (monitor *Monitor) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.TogglePhase})
 		case "z":
 			modelupdate.Apply(monitor.state, modelupdate.Message{Command: modelupdate.ToggleAll})
+		case "b":
+			if monitor.bootstrap != nil {
+				tasks, err := monitor.bootstrap()
+				if err != nil {
+					monitor.notice = "Bootstrap failed: " + err.Error()
+				} else {
+					monitor.state.SetTasks(tasks)
+					monitor.notice = "Bootstrap complete"
+				}
+			}
 		case "/":
 			monitor.filtering = true
 		}
@@ -78,10 +96,13 @@ func (monitor *Monitor) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 func (monitor *Monitor) View() tea.View {
 	content := modelview.Render(monitor.state)
+	if monitor.notice != "" {
+		content += "\n" + monitor.notice
+	}
 	if monitor.filtering || monitor.filter != "" {
 		content += "\nFilter: " + monitor.filter
 	}
-	content += "\nTab pane  ↑/k ↓/j scroll  PgUp/PgDn page  h/l fold  space/o toggle  / filter  q quit"
+	content += "\nTab pane  ↑/k ↓/j scroll  PgUp/PgDn page  h/l fold  space/o toggle  b bootstrap  / filter  q quit"
 	view := tea.NewView(content)
 	view.AltScreen = true
 	return view

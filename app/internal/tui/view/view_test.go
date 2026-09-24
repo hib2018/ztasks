@@ -32,7 +32,7 @@ func TestRenderFramesEveryPaneAndMarksFocus(t *testing.T) {
 	state.SetActivity([]model.Activity{{Type: "task.started", TaskID: "T001"}})
 	state.SetInterventions([]model.Intervention{{Action: "pause", State: "pending"}})
 	output := Render(state)
-	for _, title := range []string{"[ Tasks ]", "Task Detail", "Activity", "Human Intervention"} {
+	for _, title := range []string{"[ Tasks — READY:1 ]", "Task Detail", "Activity", "Human Intervention"} {
 		if !strings.Contains(output, title) {
 			t.Fatalf("framed pane %q missing: %s", title, output)
 		}
@@ -68,8 +68,8 @@ func TestTaskTreeSelectionWrappingAndPaneHeights(t *testing.T) {
 	lines := strings.Split(output, "\n")
 	for index, line := range lines {
 		if strings.Contains(line, "deliberately long") {
-			if index+1 >= len(lines) || !strings.HasPrefix(lines[index+1], "│"+strings.Repeat(" ", 18)) {
-				t.Fatalf("wrapped title continuation is not aligned: %q", lines[index+1])
+			if index+1 >= len(lines) || !strings.HasPrefix(lines[index+1], "│  │") {
+				t.Fatalf("wrapped title continuation is not aligned with tree guide: %q", lines[index+1])
 			}
 			break
 		}

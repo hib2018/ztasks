@@ -39,8 +39,12 @@ func Render(state *model.Model) string {
 	activityLines := activityLines(state)
 	interventionLines := interventionLines(state)
 
+	taskTitle := "Tasks"
+	if summary := statusSummary(state); summary != "" {
+		taskTitle += " — " + summary
+	}
 	var body string
-	body = strings.Join(box("Tasks", taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n"
+	body = strings.Join(box(taskTitle, taskLines, width, topTotal, state.FocusedPane() == model.TaskPane), "\n") + "\n"
 	if width < 64 {
 		body += strings.Join(box("Task Detail", wrapDetailLines(detailLines, width-2), width, bottomTotal, state.FocusedPane() == model.DetailPane), "\n") + "\n" +
 			strings.Join(box("Activity", activityLines, width, bottomTotal, state.FocusedPane() == model.ActivityPane), "\n") + "\n" +
@@ -88,12 +92,16 @@ func treeLines(state *model.Model, width int) []string {
 		if last {
 			branch = "└─ "
 		}
-		id, status, marker := row.Task.ID, "["+strings.ToUpper(row.Task.Status)+"]", "  "
+		id, status, marker := row.Task.ID, statusBadge(row.Task.Status), "  "
 		if isSelected {
 			id, status, marker = selectedText(id), selectedText(status), "→ "
 		}
 		label := marker + branch + id + " " + status + " "
-		indent := strings.Repeat(" ", displayWidth(label))
+		branchContinuation := "│  "
+		if last {
+			branchContinuation = "   "
+		}
+		indent := strings.Repeat(" ", displayWidth(marker)) + branchContinuation + strings.Repeat(" ", displayWidth(id+" "+status+" "))
 		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
 		chunk := []string{label + wrapped[0]}
 		for _, continuation := range wrapped[1:] {
@@ -183,6 +191,50 @@ func wrapDetailLines(lines []string, width int) []string {
 		}
 	}
 	return wrapped
+}
+
+func statusSummary(state *model.Model) string {
+	counts := map[string]int{}
+	for _, task := range state.Tasks() {
+		counts[strings.ToLower(task.Status)]++
+	}
+	order := []string{"running", "blocked", "failed", "paused", "ready", "pending", "completed", "skipped"}
+	parts := make([]string, 0, len(counts))
+	for _, status := range order {
+		if counts[status] != 0 {
+			parts = append(parts, fmt.Sprintf("%s:%d", statusLabel(status), counts[status]))
+			delete(counts, status)
+		}
+	}
+	for status, count := range counts {
+		parts = append(parts, fmt.Sprintf("%s:%d", strings.ToUpper(status), count))
+	}
+	return strings.Join(parts, "  ")
+}
+
+func statusBadge(status string) string { return "[" + statusLabel(status) + "]" }
+
+func statusLabel(status string) string {
+	switch strings.ToLower(status) {
+	case "ready":
+		return "READY"
+	case "pending":
+		return "PENDING"
+	case "running":
+		return "RUNNING"
+	case "paused":
+		return "PAUSED"
+	case "blocked":
+		return "BLOCKED"
+	case "failed":
+		return "FAILED"
+	case "completed":
+		return "DONE"
+	case "skipped":
+		return "SKIPPED"
+	default:
+		return strings.ToUpper(status)
+	}
 }
 
 func selectedText(value string) string {

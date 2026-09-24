@@ -94,7 +94,11 @@ func treeLines(state *model.Model, width int) []string {
 			id, status, marker = selectedText(id), selectedText(status), "→ "
 		}
 		label := marker + branch + id + " " + status + " "
-		indent := strings.Repeat(" ", displayWidth(label))
+		branchContinuation := "│  "
+		if last {
+			branchContinuation = "   "
+		}
+		indent := strings.Repeat(" ", displayWidth(marker)) + branchContinuation + strings.Repeat(" ", displayWidth(id+" "+status+" "))
 		wrapped := strings.Split(ansi.Wrap(row.Task.Title, max(1, width-displayWidth(label)), " "), "\n")
 		chunk := []string{label + wrapped[0]}
 		for _, continuation := range wrapped[1:] {
@@ -134,6 +138,10 @@ func wrapDetailLines(lines []string, width int) []string {
 	}
 	wrapped := make([]string, 0, len(lines))
 	for _, line := range lines {
+		if strings.HasPrefix(line, "Title   : ") {
+			wrapped = append(wrapped, fit(line, width))
+			continue
+		}
 		prefix, content := wrapPrefix(line)
 		contentWidth := width - displayWidth(prefix)
 		if content == "" || contentWidth <= 0 {
